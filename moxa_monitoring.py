@@ -17,23 +17,25 @@ import collections
 import pickle
 import values
 import textwrap
+import config
 
-rem_file1 = open("/sintez/sintez/moxa_monitoring/parameters/remont1.pkl", "rb")
+
+rem_file1 = open("%sparameters/remont1.pkl" % config.folder_path, "rb")
 remont1 = pickle.load(rem_file1)
 rem_file1.close()
-rem_file2 = open("/sintez/sintez/moxa_monitoring/parameters/remont2.pkl", "rb")
+rem_file2 = open("%sparameters/remont2.pkl" % config.folder_path, "rb")
 remont2 = pickle.load(rem_file2)
 rem_file2.close()
-rem_file3 = open("/sintez/sintez/moxa_monitoring/parameters/remont3.pkl", "rb")
+rem_file3 = open("%sparameters/remont3.pkl" % config.folder_path, "rb")
 remont3 = pickle.load(rem_file3)
 rem_file3.close()
-rem_file4 = open("/sintez/sintez/moxa_monitoring/parameters/remont4.pkl", "rb")
+rem_file4 = open("%sparameters/remont4.pkl" % config.folder_path, "rb")
 remont4 = pickle.load(rem_file4)
 rem_file4.close()
-rem_file5 = open("/sintez/sintez/moxa_monitoring/parameters/remont5.pkl", "rb")
+rem_file5 = open("%sparameters/remont5.pkl" % config.folder_path, "rb")
 remont5 = pickle.load(rem_file5)
 rem_file5.close()
-rem_file6 = open("/sintez/sintez/moxa_monitoring/parameters/remont6.pkl", "rb")
+rem_file6 = open("%sparameters/remont6.pkl" % config.folder_path, "rb")
 remont6 = pickle.load(rem_file6)
 rem_file6.close()
 
@@ -41,7 +43,7 @@ rem_file6.close()
 #Формирование лога
 
 logit = logging.getLogger('logit')
-handler = logging.handlers.RotatingFileHandler("/sintez/sintez/moxa_monitoring/moxa.log", mode = 'a')
+handler = logging.handlers.RotatingFileHandler("%smoxa.log% config.folder_path", mode = 'a')
 formatter = logging.Formatter('%(asctime)s %(message)s')
 handler.setFormatter(formatter)
 logging.Formatter.converter = time.gmtime
@@ -55,7 +57,7 @@ def insert_text():
     win.wm_title("Просмотр лога") 
     text = ScrolledText.ScrolledText(win)
     text.pack(expand=True, fill = 'both')
-    with open('/sintez/sintez/moxa_monitoring/moxa.log', 'r') as log:
+    with open('%smoxa.log% config.folder_path', 'r') as log:
         file_log = log.readlines()
         text.delete(1.0, tk.END)
         for element in file_log:
@@ -68,13 +70,13 @@ def return_channel(moxa, remont, tree, iid, num):
     row = tree.item(iid)
     key1 = row['values'][0]
     print(key1)
-    rem_file = open("/sintez/sintez/moxa_monitoring/parameters/remont%s.pkl" %num, "rb")
+    rem_file = open("%sparameters/remont%s.pkl" % config.folder_path %num, "rb")
     remont = pickle.load(rem_file)
     rem_file.close()
     for key in remont.keys():
         if key == key1:
             del(remont[key1])
-            rem_file = open("/sintez/sintez/moxa_monitoring/parameters/remont%s.pkl" %num, "wb")
+            rem_file = open("%sparameters/remont%s.pkl" % config.folder_path %num, "wb")
             pickle.dump(remont, rem_file)
             rem_file.close()
             tree_num = key1-1
@@ -113,7 +115,7 @@ class Popup(Menu):
         self.add_command(label="ТЕСТ", command =comment )
         row = tree.item(iid)
         key = row["values"][0]
-        rem_file = open("/sintez/sintez/moxa_monitoring/parameters/remont%s.pkl" %num, "rb")
+        rem_file = open("%sparameters/remont%s.pkl" % config.folder_path %num, "rb")
         remont = pickle.load(rem_file)
         self.bind("<FocusOut>", self.focusOut)
         if key in remont.keys():  
@@ -181,7 +183,7 @@ def OnDoubleClick(moxa, remont, tree, iid, num):
         end = date2+' '+str(h2)+':'+str(m2)
         d2 = {key: [name, begin.encode('utf-8'), end.encode('utf-8')]}
         remont.update(d2)
-        rem_file = open("/sintez/sintez/moxa_monitoring/parameters/remont%s.pkl" %num, "wb")
+        rem_file = open("%sparameters/remont%s.pkl" % config.folder_path %num, "wb")
         pickle.dump(remont, rem_file)
         rem_file.close()
         tree_num = key-1
@@ -320,16 +322,16 @@ def moxa_func(ip, tree, name, moxa, rx, tx,  updatetime, IT, add_in_table, rem_n
     tree.heading("two", text=text)
     tree.column("two",minwidth=0,width=210, stretch=NO)
     remember = []
-    rem_file = open("/sintez/sintez/moxa_monitoring/parameters/remont%s.pkl" %rem_num, "rb")
+    rem_file = open("%sparameters/remont%s.pkl" % config.folder_path %rem_num, "rb")
     remont = pickle.load(rem_file)
     rem_file.close()
-    upd_file = open("/sintez/sintez/moxa_monitoring/parameters/updatetime%s.pkl" %rem_num, "rb")
+    upd_file = open("%sparameters/updatetime%s.pkl" % config.folder_path %rem_num, "rb")
     updatetime = pickle.load(upd_file)
     upd_file.close()
-    rx_file = open("/sintez/sintez/moxa_monitoring/parameters/rx%s.pkl" %rem_num, "rb")
+    rx_file = open("%sparameters/rx%s.pkl" % config.folder_path %rem_num, "rb")
     rx = pickle.load(rx_file)
     rx_file.close()
-    tx_file = open("/sintez/sintez/moxa_monitoring/parameters/tx%s.pkl" %rem_num, "rb")
+    tx_file = open("%sparameters/tx%s.pkl" % config.folder_path %rem_num, "rb")
     tx = pickle.load(tx_file)
     tx_file.close()
     for key in remont.keys():
@@ -348,10 +350,10 @@ def moxa_func(ip, tree, name, moxa, rx, tx,  updatetime, IT, add_in_table, rem_n
                 updatetime[key] = curenttime
                 rx[key] = curentrx
                 tx[key] = curenttx
-                rx_file = open("/sintez/sintez/moxa_monitoring/parameters/rx%s.pkl" %rem_num, "wb")
+                rx_file = open("%sparameters/rx%s.pkl" % config.folder_path %rem_num, "wb")
                 pickle.dump(rx, rx_file)
                 rx_file.close()
-                tx_file = open("/sintez/sintez/moxa_monitoring/parameters/tx%s.pkl" %rem_num, "wb")
+                tx_file = open("%sparameters/tx%s.pkl" % config.folder_path %rem_num, "wb")
                 pickle.dump(tx, tx_file)
                 tx_file.close()
                 if curenttx != '0' and curentrx != '0':
@@ -360,7 +362,7 @@ def moxa_func(ip, tree, name, moxa, rx, tx,  updatetime, IT, add_in_table, rem_n
                     lst = [key, moxa[key], state, 'green']
                     d = {key: lst}
                     add_in_table.update(d)
-                    upd_file = open("/sintez/sintez/moxa_monitoring/parameters/updatetime%s.pkl" %rem_num, "wb")
+                    upd_file = open("%sparameters/updatetime%s.pkl" % config.folder_path %rem_num, "wb")
                     pickle.dump(updatetime, upd_file)
                     upd_file.close()
                 if curentrx != '0' and key not in remember:
@@ -368,7 +370,7 @@ def moxa_func(ip, tree, name, moxa, rx, tx,  updatetime, IT, add_in_table, rem_n
                     lst = [key, moxa[key], state, 'green']
                     d = {key: lst}
                     add_in_table.update(d)
-                    upd_file = open("/sintez/sintez/moxa_monitoring/parameters/updatetime%s.pkl" %rem_num, "wb")
+                    upd_file = open("%sparameters/updatetime%s.pkl" % config.folder_path %rem_num, "wb")
                     pickle.dump(updatetime, upd_file)
                     upd_file.close()
                 if curenttx != '0' and key not in remember:
@@ -376,12 +378,12 @@ def moxa_func(ip, tree, name, moxa, rx, tx,  updatetime, IT, add_in_table, rem_n
                     lst = [key, moxa[key], state, 'green']
                     d = {key: lst}
                     add_in_table.update(d)
-                    upd_file = open("/sintez/sintez/moxa_monitoring/parameters/updatetime%s.pkl" %rem_num, "wb")
+                    upd_file = open("%sparameters/updatetime%s.pkl" % config.folder_path %rem_num, "wb")
                     pickle.dump(updatetime, upd_file)
                     upd_file.close()
 	    IT[key] = curenttime - updatetime[key]      
             if IT[key] > datetime.timedelta(minutes=1) and IT[key] < datetime.timedelta(hours=12) and  moxa[key] !="":
-                upd_file = open("/sintez/sintez/moxa_monitoring/parameters/updatetime%s.pkl" %rem_num, "wb")
+                upd_file = open("%sparameters/updatetime%s.pkl" % config.folder_path %rem_num, "wb")
                 pickle.dump(updatetime, upd_file)
                 upd_file.close()
                 state = str(updatetime[key]).split(".")[0]
@@ -405,7 +407,7 @@ def moxa_func(ip, tree, name, moxa, rx, tx,  updatetime, IT, add_in_table, rem_n
 #                    b = ttk.Button(win, text="Хорошо", command=win.destroy)
 #                    b.grid(row=1, column=0)
                     logit.warning('%s - %s пропал. Время пропадания - %s' %(name, moxa[key], updatetime[key].replace(microsecond=0)))
-                    os.system('/opt/csw/bin/mpg123 /sintez/sintez/moxa_monitoring/sound.mp3')
+                    os.system('/opt/csw/bin/mpg123 %ssound.mp3 % config.folder_path')
             if datetime.timedelta(minutes=30) < IT[key] < datetime.timedelta(minutes =31) and  moxa[key] =="Объединенная РЛИ для ВЕГА" :
 #                    win = tk.Toplevel()
 #                    win.wm_title("Внимание")
@@ -414,7 +416,7 @@ def moxa_func(ip, tree, name, moxa, rx, tx,  updatetime, IT, add_in_table, rem_n
 #                    b = ttk.Button(win, text="Хорошо", command=win.destroy)
 #                    b.grid(row=1, column=0)
                     logit.warning('%s - %s пропал. Время пропадания - %s' %(name, moxa[key], updatetime[key].replace(microsecond=0)))
-                    os.system('/opt/csw/bin/mpg123 /sintez/sintez/moxa_monitoring/sound.mp3')
+                    os.system('/opt/csw/bin/mpg123 %ssound.mp3 % config.folder_path')
     for key in moxa.keys():
         if key in remont.keys():
             port = key+1
@@ -424,10 +426,10 @@ def moxa_func(ip, tree, name, moxa, rx, tx,  updatetime, IT, add_in_table, rem_n
                 updatetime[key] = curenttime
                 rx[key] = curentrx
                 tx[key] = curenttx
-                rx_file = open("/sintez/sintez/moxa_monitoring/parameters/rx%s.pkl" %rem_num, "wb")
+                rx_file = open("%sparameters/rx%s.pkl" % config.folder_path %rem_num, "wb")
                 pickle.dump(rx, rx_file)
                 rx_file.close()
-                tx_file = open("/sintez/sintez/moxa_monitoring/parameters/tx%s.pkl" %rem_num, "wb")
+                tx_file = open("%sparameters/tx%s.pkl" % config.folder_path %rem_num, "wb")
                 pickle.dump(tx, tx_file)
                 tx_file.close()
                 if curenttx != '0' and curentrx != '0':
@@ -464,7 +466,7 @@ a= 50
 def clean_func1():
      while True:
              try:
-                     moxa_func('moxa1', tree1, "MOXA-1", values.moxa1, values.rx1, values.tx1, values.updatetime1, values.IT1, values.add_in_table1,  1)
+                     moxa_func(config.ip1, tree1, "MOXA-1", values.moxa1, values.rx1, values.tx1, values.updatetime1, values.IT1, values.add_in_table1,  1)
                      time.sleep(a)
              except:
                      pass
@@ -472,7 +474,7 @@ def clean_func1():
 def clean_func2():
      while True:
              try:
-                     moxa_func('moxa2', tree2, "MOXA-2", values.moxa2, values.rx2, values.tx2, values.updatetime2, values.IT2, values.add_in_table2,  2)
+                     moxa_func(config.ip2, tree2, "MOXA-2", values.moxa2, values.rx2, values.tx2, values.updatetime2, values.IT2, values.add_in_table2,  2)
                      time.sleep(a)
              except:
                      pass
@@ -480,7 +482,7 @@ def clean_func2():
 def clean_func3():
      while True:
              try:
-                     moxa_func('moxa3', tree3, "MOXA-3", values.moxa3, values.rx3, values.tx3, values.updatetime3, values.IT3, values.add_in_table3,  3)
+                     moxa_func(config.ip3, tree3, "MOXA-3", values.moxa3, values.rx3, values.tx3, values.updatetime3, values.IT3, values.add_in_table3,  3)
                      time.sleep(a)
              except:
                      pass
@@ -488,7 +490,7 @@ def clean_func3():
 def clean_func4():
      while True:
              try:
-                     moxa_func('moxa4', tree4, "MOXA-4", values.moxa4, values.rx4, values.tx4,  values.updatetime4,values.IT4, values.add_in_table4,  4)
+                     moxa_func(config.ip4, tree4, "MOXA-4", values.moxa4, values.rx4, values.tx4,  values.updatetime4,values.IT4, values.add_in_table4,  4)
                      time.sleep(a)
              except:
                      pass
@@ -496,7 +498,7 @@ def clean_func4():
 def clean_func5():
      while True:
              try:
-                     moxa_func('moxa1', tree5, "MOXA-5", values.moxa5, values.rx5, values.tx5, values.updatetime5,values.IT5, values.add_in_table5,  5)
+                     moxa_func(config.ip5, tree5, "MOXA-5", values.moxa5, values.rx5, values.tx5, values.updatetime5,values.IT5, values.add_in_table5,  5)
                      time.sleep(a)
              except:
                      pass
@@ -504,7 +506,7 @@ def clean_func5():
 def clean_func6():
      while True:
              try:
-                     moxa_func('moxa2', tree6, "MOXA-6", values.moxa6, values.rx6, values.tx6, values.updatetime6, values.IT6, values.add_in_table6,  6)
+                     moxa_func(config.ip6, tree6, "MOXA-6", values.moxa6, values.rx6, values.tx6, values.updatetime6, values.IT6, values.add_in_table6,  6)
                      time.sleep(a)
              except:
                      pass
