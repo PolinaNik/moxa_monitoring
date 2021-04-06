@@ -1,4 +1,9 @@
 #-*- coding: utf-8 -*-
+
+###############################################
+####### Скрипт для мониторинга каналов ########
+###############################################
+
 import Tkinter
 import ttk
 from ttk import *
@@ -10,38 +15,32 @@ import time
 from time import gmtime, strftime
 from tkcalendar import Calendar
 from threading import Thread
+import multiprocessing
 import subprocess
 import os
 import logging, logging.handlers
 import collections
 import pickle
-import values
 import textwrap
 import config
 
+#Определяем количество MOXA для мониторинга из конфига
+list_moxa = config.moxa
 
-rem_file1 = open("%sparameters/remont1.pkl" % config.folder_path, "rb")
-remont1 = pickle.load(rem_file1)
-rem_file1.close()
-rem_file2 = open("%sparameters/remont2.pkl" % config.folder_path, "rb")
-remont2 = pickle.load(rem_file2)
-rem_file2.close()
-rem_file3 = open("%sparameters/remont3.pkl" % config.folder_path, "rb")
-remont3 = pickle.load(rem_file3)
-rem_file3.close()
-rem_file4 = open("%sparameters/remont4.pkl" % config.folder_path, "rb")
-remont4 = pickle.load(rem_file4)
-rem_file4.close()
-rem_file5 = open("%sparameters/remont5.pkl" % config.folder_path, "rb")
-remont5 = pickle.load(rem_file5)
-rem_file5.close()
-rem_file6 = open("%sparameters/remont6.pkl" % config.folder_path, "rb")
-remont6 = pickle.load(rem_file6)
-rem_file6.close()
+#Функции для загрузки и сохранения изменения в словари
+def load_file(name, num):
+    _file = open('/sintez/sintez/moxa_monitoring/parameters/%s%s.pkl' % (name, num), "rb")
+    result = pickle.load(_file)
+    _file.close()
+    return result
+
+def dump_file(name, num, dict_new):
+    _file = open("/sintez/sintez/moxa_monitoring/parameters/%s%s.pkl" % (name, num), "wb")
+    pickle.dump(dict_new, _file)
+    _file.close()
 
 
 #Формирование лога
-
 logit = logging.getLogger('logit')
 handler = logging.handlers.RotatingFileHandler("%smoxa.log% config.folder_path", mode = 'a')
 formatter = logging.Formatter('%(asctime)s %(message)s')
@@ -49,9 +48,11 @@ handler.setFormatter(formatter)
 logging.Formatter.converter = time.gmtime
 logit.addHandler(handler)
 
+#Создание основного окна
 root = tk.Tk()
 root.title("Мониторинг состояния каналов")
 
+#Функция для просмотра лога
 def insert_text():
     win = tk.Toplevel()
     win.wm_title("Просмотр лога") 
@@ -66,33 +67,60 @@ def insert_text():
     but.pack()
 
 
-def return_channel(moxa, remont, tree, iid, num):
-    row = tree.item(iid)
-    key1 = row['values'][0]
-    print(key1)
-    rem_file = open("%sparameters/remont%s.pkl" % config.folder_path %num, "rb")
-    remont = pickle.load(rem_file)
-    rem_file.close()
-    for key in remont.keys():
-        if key == key1:
-            del(remont[key1])
-            rem_file = open("%sparameters/remont%s.pkl" % config.folder_path %num, "wb")
-            pickle.dump(remont, rem_file)
-            rem_file.close()
-            tree_num = key1-1
-            r = tree.get_children()[tree_num]
-            tree.item(r, values=(str(key1), str(moxa[key1]), str('<><><>')), tags=("green",)) 
-            logit.warning('Канал %s в MOXA%s возвращен в работу' %(moxa[key1], num))
+#Вернуть канал в работу
+class Popup(Menu):
+    def __init__(self, master, tree, iid, num):
+        Menu.__init__(self, master, tearoff=0)
+        self.tree = tree
+        self.num = num
+        self.add_command(label="Отправить канал в ремонт", command=lambda: OnDoubleClick(tree, iid,num))
+        self.add_command(label="ТЕСТ", command =comment)
+        row = tree.item(iid)
+        key = row["values"][0]
+        rem_file = open("/sintez/sintez/moxa_monitoring/parameters/remont%s.pkl" %num, "rb")
+        remont = pickle.load(rem_file)
+        self.bind("<FocusOut>", self.focusOut)
+        if key in remont.keys():
+            self.delete(0)
+            self.add_command(label="Вернуть канал в работу", command = lambda: return_channel(tree,iid, num))
+    def focusOut(self, event=None):
+        self.unpost()
 
-menu_bar = tk.Menu(root)
-menu_bar.add_command(label="Показать лог", command= lambda: insert_text())
-#menu_bar.add_command(label="Вернуть канал в работу", command= lambda: return_channel())
-#menu_bar.add_command(label="Exit", command= lambda: root.destroy())
-root.config(menu=menu_bar)
+def do_popup(event, root, tree, num):
+    iid = tree.identify_row(event.y)
+    if iid:
+        popup = Popup(root, tree, iid, num)
+        try:
+            tree.selection_set(iid)
+            popup.tk_popup(event.x_root, event.y_root)
+        finally:
+            popup.grab_release()
 
 
-frame = tk.Frame(root)
-frame.pack()
+
+#Функция для возвращения канала в работу
+def return_channel(tree, iid, num):
+     row = tree.item(iid)
+     key_tree = row['values'][0]
+     all_values = config.all_values_moxa
+     name = all_values[num][0][key_tree]
+     for x in all_values.keys():
+             for all_dict in all_values[x][0]:
+                     if name == all_values[x][0][all_dict]:
+                             if x in list_moxa:
+                                     tree = all_trees[x]
+                                     remont = load_file('remont', x)
+                                     for key in remont.keys():
+                                             if key == key_tree:
+                                                     del(remont[key])
+                                                     dump_file('remont', x, remont)
+                                                     tree_num = key_tree-1
+                                                     r = tree.get_children()[tree_num]
+					             moxa = all_values[x][0]
+                                                     tree.item(r, values=(str(key_tree), str(moxa[key_tree]), str('<><><>')), tags=("green",))
+						     logit.warning('Канал %s в MOXA%s возвращен в работу' % (moxa[key_tree], x))
+
+
 
 def comment():
     top = tk.Toplevel()
@@ -104,58 +132,32 @@ def comment():
     but = tk.Button(frame1, text="Close", command=top.destroy)
     but.pack()
 
-class Popup(Menu):
-    def __init__(self, master, tree, moxa, remont, iid, num):
-        Menu.__init__(self, master, tearoff=0)
-        self.tree = tree
-        self.moxa = moxa
-        self.remont = remont
-        self.num = num
-        self.add_command(label="Отправить канал в ремонт", command=lambda: OnDoubleClick(moxa, remont, tree, iid,num))
-        self.add_command(label="ТЕСТ", command =comment )
-        row = tree.item(iid)
-        key = row["values"][0]
-        rem_file = open("%sparameters/remont%s.pkl" % config.folder_path %num, "rb")
-        remont = pickle.load(rem_file)
-        self.bind("<FocusOut>", self.focusOut)
-        if key in remont.keys():  
-            self.delete(0)      
-            self.add_command(label="Вернуть канал в работу", command = lambda: return_channel(moxa, remont, tree, iid, num))
-    def focusOut(self, event=None):
-        self.unpost()
 
-def do_popup(event, root, tree, moxa, remont, num):
-    iid = tree.identify_row(event.y)
-    if iid:
-        popup = Popup(root, tree, moxa, remont, iid, num)
-        try:
-            tree.selection_set(iid)
-            popup.tk_popup(event.x_root, event.y_root)
-        finally:
-            popup.grab_release()
-   
-
+#Класс времени
 class App(Frame):
-     def __init__(self, parent):
-             Frame.__init__(self, parent)
-             self.hourstr=tk.StringVar(self, datetime.datetime.today().hour)
-             self.hour = tk.Spinbox(self,from_=0,to=23,wrap=True,textvariable=self.hourstr,width=2,state="readonly")
-             self.minstr=tk.StringVar(self,datetime.datetime.today().minute)
-             self.minstr.trace("w",self.trace_var)
-             self.last_value = ""
-             self.min = tk.Spinbox(self,from_=0,to=59,wrap=True,textvariable=self.minstr,width=2,state="readonly")
-             self.hour.grid()
-             self.min.grid(row=0,column=1)
-     def trace_var(self,*args):
-             if self.last_value == "59" and self.minstr.get() == "0":
-                     self.hourstr.set(int(self.hourstr.get())+1 if self.hourstr.get() !="23" else 0)
-             self.last_value = self.minstr.get()
+    def __init__(self, parent):
+        Frame.__init__(self, parent)
+        self.hourstr = tk.StringVar(self, datetime.datetime.today().hour)
+        self.hour = tk.Spinbox(self, from_=0, to=23, wrap=True, textvariable=self.hourstr, width=2, state="readonly")
+        self.minstr = tk.StringVar(self, datetime.datetime.today().minute)
+        self.minstr.trace("w", self.trace_var)
+        self.last_value = ""
+        self.min = tk.Spinbox(self, from_=0, to=59, wrap=True, textvariable=self.minstr, width=2, state="readonly")
+        self.hour.grid()
+        self.min.grid(row=0, column=1)
+
+    def trace_var(self, *args):
+        if self.last_value == "59" and self.minstr.get() == "0":
+            self.hourstr.set(int(self.hourstr.get()) + 1 if self.hourstr.get() != "23" else 0)
+        self.last_value = self.minstr.get()
 
 
-def OnDoubleClick(moxa, remont, tree, iid, num):
+#Функция добавления канала в ремонт
+def OnDoubleClick(tree, iid, num):
     row = tree.item(iid)
-    key = row['values'][0]
-    name = row['values'][1].encode('utf-8')
+    key_tree = row['values'][0]
+    all_values = config.all_values_moxa
+    name = all_values[num][0][key_tree]
     top = tk.Toplevel()
     top.wm_title(name)
     frame1 = tk.Frame(top)
@@ -176,23 +178,42 @@ def OnDoubleClick(moxa, remont, tree, iid, num):
     cal2.pack()
     app2 = App(frame2)
     app2.pack()
-    but1 = ttk.Button(top, text="Выбрать", command=lambda: select(top, key, name, cal.get_date(), app1.hourstr.get(), app1.minstr.get(), cal2.get_date(), app2.hourstr.get(), app2.minstr.get() , moxa, remont, num))
+    but1 = ttk.Button(top, text="Выбрать",
+                      command=lambda: select(top, key_tree, name, cal.get_date(), app1.hourstr.get(), app1.minstr.get(),
+                                             cal2.get_date(), app2.hourstr.get(), app2.minstr.get(), num))
     but1.pack(pady=120)
-    def select(top, key, name, date1, h1, m1, date2, h2, m2, moxa, remont, num):
-        begin = date1+' '+str(h1)+':'+str(m1)
-        end = date2+' '+str(h2)+':'+str(m2)
-        d2 = {key: [name, begin.encode('utf-8'), end.encode('utf-8')]}
-        remont.update(d2)
-        rem_file = open("%sparameters/remont%s.pkl" % config.folder_path %num, "wb")
-        pickle.dump(remont, rem_file)
-        rem_file.close()
-        tree_num = key-1
-        r = tree.get_children()[tree_num]
-        tree.item(r, values=(str(key), str(d2[key][0]), str(d2[key][1])), tags=("blue",)) 
-        logit.warning('Канал %s в MOXA%s  отправлен на ремонт на период с %s до %s' %(d2[key][0], num, begin.encode('utf-8'), end.encode('utf-8')))
+
+    def select(top, key_tree, name, date1, h1, m1, date2, h2, m2, num):
+        begin = date1 + ' ' + str(h1) + ':' + str(m1)
+        end = date2 + ' ' + str(h2) + ':' + str(m2)
+        d2 = {key_tree: [name, begin.encode('utf-8'), end.encode('utf-8')]}
+	all_values = config.all_values_moxa
+	for x in all_values.keys():
+             for all_dict in all_values[x][0]:
+                     if name == all_values[x][0][all_dict]:
+                             if x in list_moxa:
+                                     tree = all_trees[x]
+        			     remont_new = config.all_values_moxa[x][5]
+        			     remont_new.update(d2)
+        			     dump_file('remont', x, remont_new)
+        			     tree_num = key_tree - 1
+        			     r = tree.get_children()[tree_num]
+        			     tree.item(r, values=(str(key_tree), str(d2[key_tree][0]), str(d2[key_tree][1])), tags=("blue",))
+                                     logit.warning('Канал %s в MOXA%s  отправлен на ремонт на период с %s до %s' % (d2[key_tree][0], num, begin.encode('utf-8'), end.encode('utf-8')))
         top.destroy()
 
 
+
+#Формирование меню
+menu_bar = tk.Menu(root)
+menu_bar.add_command(label="Показать лог", command= lambda: insert_text())
+menu_bar.add_command(label="Exit", command= lambda: root.destroy())
+root.config(menu=menu_bar)
+
+
+#Формирование раздела, в который будут помещаться таблицы
+frame = tk.Frame(root)
+frame.pack()
 
 style = ttk.Style(root)
 style.theme_use("clam")
@@ -200,140 +221,82 @@ style.configure("Treeview", background="gray7",
                 fieldbackground="gray7", foreground="white", font='Calibri 10', rowheight=14)
 style.configure("Treeview.Heading", font='Calibri 10')
 
-tree1 = ttk.Treeview(frame)
-tree1["columns"] = ("one", "two", "three")
-tree1.heading("#0", text="")
-tree1.column("#0",minwidth=0,width=5, stretch=NO)
-tree1.heading("one", text="Port")
-tree1.column("one",minwidth=0,width=30, stretch=NO)
-tree1.heading("three", text="State")
-tree1.column("three",minwidth=0,width=150, stretch=YES)
-tree1['height'] = 32
-tree1.tag_configure('green', background='gray7', foreground='green2')
-tree1.tag_configure('red', background='gray7', foreground='red2')
-tree1.tag_configure('blue', background='gray7', foreground='RoyalBlue')
-tree1.tag_configure('yellow', background='gray7', foreground='yellow')
-tree1.tag_configure('ready', background='gray7', foreground='white')
-tree1.bind("<Button-3>", lambda event: do_popup(event, root, tree1, values.moxa1, remont1, 1))
-tree1.pack(side=LEFT)
+#Функция для формирования таблицы со значениями
+def make_tree(num):
+     tree = ttk.Treeview(frame)
+     tree["columns"] = ("one", "two", "three")
+     tree.heading("#0", text="")
+     tree.column("#0",minwidth=0,width=5, stretch=NO)
+     tree.heading("one", text="Port")
+     tree.column("one",minwidth=0,width=30, stretch=NO)
+     tree.heading("three", text="State")
+     tree.column("three",minwidth=0,width=150, stretch=YES)
+     tree['height'] = 32
+     tree.tag_configure('green', background='gray7', foreground='green2')
+     tree.tag_configure('red', background='gray7', foreground='red2')
+     tree.tag_configure('blue', background='gray7', foreground='RoyalBlue')
+     tree.tag_configure('yellow', background='gray7', foreground='yellow')
+     tree.tag_configure('ready', background='gray7', foreground='white')
+     tree.bind("<Button-3>", lambda event: do_popup(event, root, tree, num))
+     tree.pack(side=LEFT)
+     return tree
 
-tree2 = ttk.Treeview(frame)
-tree2["columns"] = ("one", "two", "three")
-tree2.heading("#0", text="")
-tree2.column("#0",minwidth=0,width=5, stretch=NO)
-tree2.heading("one", text="Port")
-tree2.column("one",minwidth=0,width=30, stretch=NO)
-tree2.heading("three", text="State")
-tree2.column("three",minwidth=0,width=150, stretch=YES)
-tree2['height'] = 32
-tree2.tag_configure('green', background='gray7', foreground='green2')
-tree2.tag_configure('red', background='gray7', foreground='red2')
-tree2.tag_configure('blue', background='gray7', foreground='RoyalBlue')
-tree2.tag_configure('yellow', background='gray7', foreground='yellow')
-tree2.tag_configure('ready', background='gray7', foreground='white')
-tree2.bind("<Button-3>", lambda event: do_popup(event, root, tree2, values.moxa2, remont2, 2))
-tree2.pack(side=LEFT)
 
-tree3 = ttk.Treeview(frame)
-tree3["columns"] = ("one", "two", "three")
-tree3.heading("#0", text="")
-tree3.column("#0",minwidth=0,width=5, stretch=NO)
-tree3.heading("one", text="Port")
-tree3.column("one",minwidth=0,width=30, stretch=NO)
-tree3.heading("three", text="State")
-tree3.column("three",minwidth=0,width=150, stretch=YES)
-tree3['height'] = 32
-tree3.tag_configure('green', background='gray7', foreground='green2')
-tree3.tag_configure('red', background='gray7', foreground='red2')
-tree3.tag_configure('blue', background='gray7', foreground='RoyalBlue')
-tree3.tag_configure('yellow', background='gray7', foreground='yellow')
-tree3.tag_configure('ready', background='gray7', foreground='white')
-tree3.bind("<Button-3>", lambda event: do_popup(event, root, tree3,values.moxa3, remont3, 3))
-tree3.pack(side=LEFT)
+"""В зависимости от количества MOXA формирются таблицы.
+Значение кол-ва MOXA задается в конфиге, по умолчанию 4"""
 
-tree4 = ttk.Treeview(frame)
-tree4["columns"] = ("one", "two", "three")
-tree4.heading("#0", text="")
-tree4.column("#0",minwidth=0,width=5, stretch=NO)
-tree4.heading("one", text="Port")
-tree4.column("one",minwidth=0,width=30, stretch=NO)
-tree4.heading("three", text="State")
-tree4.column("three",minwidth=0,width=150, stretch=YES)
-tree4['height'] = 32
-tree4.tag_configure('green', background='gray7', foreground='green2')
-tree4.tag_configure('red', background='gray7', foreground='red2')
-tree4.tag_configure('blue', background='gray7', foreground='RoyalBlue')
-tree4.tag_configure('yellow', background='gray7', foreground='yellow')
-tree4.tag_configure('ready', background='gray7', foreground='white')
-tree4.bind("<Button-3>", lambda event: do_popup(event, root, tree4,values.moxa4, remont4, 4))
-tree4.pack(side=LEFT)
+if len(list_moxa) == 4:
+    tree1 = make_tree(1)
+    tree2 = make_tree(2)
+    tree3 = make_tree(3)
+    tree4 = make_tree(4)
+    all_trees = {1: tree1, 2: tree2, 3: tree3, 4: tree4}
 
-tree5 = ttk.Treeview(frame)
-tree5["columns"] = ("one", "two", "three")
-tree5.heading("#0", text="")
-tree5.column("#0",minwidth=0,width=5, stretch=NO)
-tree5.heading("one", text="Port")
-tree5.column("one",minwidth=0,width=30, stretch=NO)
-tree5.heading("three", text="State")
-tree5.column("three",minwidth=0,width=150, stretch=YES)
-tree5['height'] = 32
-tree5.tag_configure('green', background='gray7', foreground='green2')
-tree5.tag_configure('red', background='gray7', foreground='red2')
-tree5.tag_configure('blue', background='gray7', foreground='RoyalBlue')
-tree5.tag_configure('yellow', background='gray7', foreground='yellow')
-tree5.tag_configure('ready', background='gray7', foreground='white')
-tree5.bind("<Button-3>", lambda event: do_popup(event, root, tree5,values.moxa5, remont5, 5))
-tree5.pack(side=LEFT)
+if len(list_moxa) == 6:
+    tree1 = make_tree(1)
+    tree2 = make_tree(2)
+    tree3 = make_tree(3)
+    tree4 = make_tree(4)
+    tree5 = make_tree(5)
+    tree6 = make_tree(6)
+    all_trees2 = {1: tree1, 2: tree2, 3: tree3, 4: tree4, 5: tree5, 6: tree6}
 
-tree6 = ttk.Treeview(frame)
-tree6["columns"] = ("one", "two", "three")
-tree6.heading("#0", text="")
-tree6.column("#0",minwidth=0,width=5, stretch=NO)
-tree6.heading("one", text="Port")
-tree6.column("one",minwidth=0,width=30, stretch=NO)
-tree6.heading("three", text="State")
-tree6.column("three",minwidth=0,width=150, stretch=YES)
-tree6['height'] = 32
-tree6.tag_configure('green', background='gray7', foreground='green2')
-tree6.tag_configure('red', background='gray7', foreground='red2')
-tree6.tag_configure('blue', background='gray7', foreground='RoyalBlue')
-tree6.tag_configure('yellow', background='gray7', foreground='yellow')
-tree6.tag_configure('ready', background='gray7', foreground='white')
-tree6.bind("<Button-3>", lambda event: do_popup(event, root, tree6,remont6, tree6, 6))
-tree6.pack(side=LEFT)
+
+
 
 def insert_to_table(moxa, tree):
     for key in moxa.keys():
-        tree.insert("", "end", values=(str(key), moxa[key], "<><><>"), tags = ("green", ))
+        tree.insert("", "end", values=(str(key), moxa[key], "<><><>"), tags=("green",))
 
-insert_to_table(values.moxa1, tree1)
-insert_to_table(values.moxa2, tree2)
-insert_to_table(values.moxa3, tree3)
-insert_to_table(values.moxa4, tree4)
-insert_to_table(values.moxa5, tree5)
-insert_to_table(values.moxa6, tree6)
+if len(list_moxa) == 4:
+    insert_to_table(config.all_values_moxa[1][0], tree1)
+    insert_to_table(config.all_values_moxa[2][0], tree2)
+    insert_to_table(config.all_values_moxa[3][0], tree3)
+    insert_to_table(config.all_values_moxa[4][0], tree4)
 
-def wrap(string, lenght=15):
-	return '\n'.join(textwrap.wrap(string, lenght))
+if len(list_moxa) == 6:
+    insert_to_table(config.all_values_moxa[1][0], tree1)
+    insert_to_table(config.all_values_moxa[2][0], tree2)
+    insert_to_table(config.all_values_moxa[3][0], tree3)
+    insert_to_table(config.all_values_moxa[4][0], tree4)
+    insert_to_table(config.all_values_moxa[5][0], tree5)
+    insert_to_table(config.all_values_moxa[6][0], tree6)
 
-def moxa_func(ip, tree, name, moxa, rx, tx,  updatetime, IT, add_in_table, rem_num):
+def moxa_func(tree, num):
     curenttime = datetime.datetime.today()
+    name = "MOXA-%s" %num
     text = "%s %s" %(name, strftime("%Y-%m-%d %H:%M:%S", gmtime()))
     tree.heading("two", text=text)
     tree.column("two",minwidth=0,width=210, stretch=NO)
     remember = []
-    rem_file = open("%sparameters/remont%s.pkl" % config.folder_path %rem_num, "rb")
-    remont = pickle.load(rem_file)
-    rem_file.close()
-    upd_file = open("%sparameters/updatetime%s.pkl" % config.folder_path %rem_num, "rb")
-    updatetime = pickle.load(upd_file)
-    upd_file.close()
-    rx_file = open("%sparameters/rx%s.pkl" % config.folder_path %rem_num, "rb")
-    rx = pickle.load(rx_file)
-    rx_file.close()
-    tx_file = open("%sparameters/tx%s.pkl" % config.folder_path %rem_num, "rb")
-    tx = pickle.load(tx_file)
-    tx_file.close()
+    remont = load_file('remont', num)
+    updatetime = load_file('updatetime', num)
+    rx = load_file('rx', num)
+    tx = load_file('tx', num)
+    IT = load_file('IT', num)
+    moxa = config.all_values_moxa[num][0]
+    ip = config.all_values_moxa[num][7]
+    add_in_table = config.all_values_moxa[num][6]
     for key in remont.keys():
         rem = remont[key]
         name_rem = rem[0]
@@ -350,42 +313,30 @@ def moxa_func(ip, tree, name, moxa, rx, tx,  updatetime, IT, add_in_table, rem_n
                 updatetime[key] = curenttime
                 rx[key] = curentrx
                 tx[key] = curenttx
-                rx_file = open("%sparameters/rx%s.pkl" % config.folder_path %rem_num, "wb")
-                pickle.dump(rx, rx_file)
-                rx_file.close()
-                tx_file = open("%sparameters/tx%s.pkl" % config.folder_path %rem_num, "wb")
-                pickle.dump(tx, tx_file)
-                tx_file.close()
+                dump_file('rx', num, rx)
+                dump_file('tx', num, tx)
                 if curenttx != '0' and curentrx != '0':
                     state = '<<< >>>'
                     remember.append(key)
                     lst = [key, moxa[key], state, 'green']
                     d = {key: lst}
                     add_in_table.update(d)
-                    upd_file = open("%sparameters/updatetime%s.pkl" % config.folder_path %rem_num, "wb")
-                    pickle.dump(updatetime, upd_file)
-                    upd_file.close()
+                    dump_file('updatetime', num, updatetime)
                 if curentrx != '0' and key not in remember:
                     state = '<<<'
                     lst = [key, moxa[key], state, 'green']
                     d = {key: lst}
                     add_in_table.update(d)
-                    upd_file = open("%sparameters/updatetime%s.pkl" % config.folder_path %rem_num, "wb")
-                    pickle.dump(updatetime, upd_file)
-                    upd_file.close()
+                    dump_file('updatetime', num, updatetime)
                 if curenttx != '0' and key not in remember:
                     state = '>>>'
                     lst = [key, moxa[key], state, 'green']
                     d = {key: lst}
                     add_in_table.update(d)
-                    upd_file = open("%sparameters/updatetime%s.pkl" % config.folder_path %rem_num, "wb")
-                    pickle.dump(updatetime, upd_file)
-                    upd_file.close()
-	    IT[key] = curenttime - updatetime[key]      
+                    dump_file('updatetime', num, updatetime)
+	    IT[key] = curenttime - updatetime[key]
             if IT[key] > datetime.timedelta(minutes=1) and IT[key] < datetime.timedelta(hours=12) and  moxa[key] !="":
-                upd_file = open("%sparameters/updatetime%s.pkl" % config.folder_path %rem_num, "wb")
-                pickle.dump(updatetime, upd_file)
-                upd_file.close()
+                dump_file('updatetime', num, updatetime)
                 state = str(updatetime[key]).split(".")[0]
                 lst = [key, moxa[key], state, 'red']
                 d = {key: lst}
@@ -399,24 +350,14 @@ def moxa_func(ip, tree, name, moxa, rx, tx,  updatetime, IT, add_in_table, rem_n
                 lst = [key, "", "", 'green']
                 d = {key: lst}
                 add_in_table.update(d)
+                #Условие для всех каналов, кроме РЛИ_для_ВЕГА (при пропадании более чем на 2 мин загорается красным)
             if datetime.timedelta(minutes=2) < IT[key] < datetime.timedelta(minutes =3) and moxa[key] != "" and moxa[key] !="Объединенная РЛИ для ВЕГА" :
-#                    win = tk.Toplevel()
-#                    win.wm_title("Внимание")
-#                    l = tk.Label(win, text = "%s - %s пропал %s" %(name, moxa[key], updatetime[key].replace(microsecond=0)))
-#                    l.grid(row=0, column=0)
-#                    b = ttk.Button(win, text="Хорошо", command=win.destroy)
-#                    b.grid(row=1, column=0)
                     logit.warning('%s - %s пропал. Время пропадания - %s' %(name, moxa[key], updatetime[key].replace(microsecond=0)))
-                    os.system('/opt/csw/bin/mpg123 %ssound.mp3 % config.folder_path')
+                    os.system('/opt/csw/bin/mpg123 /sintez/sintez/moxa_monitoring/sound.mp3')
+                #Условие для РЛИ_ВЕГА (при пропадании более чем на 30 мин загорается красным)
             if datetime.timedelta(minutes=30) < IT[key] < datetime.timedelta(minutes =31) and  moxa[key] =="Объединенная РЛИ для ВЕГА" :
-#                    win = tk.Toplevel()
-#                    win.wm_title("Внимание")
-#                    l = tk.Label(win, text = "%s - %s пропал %s" %(name, moxa[key], updatetime[key].replace(microsecond=0)))
-#                    l.grid(row=0, column=0)
-#                    b = ttk.Button(win, text="Хорошо", command=win.destroy)
-#                    b.grid(row=1, column=0)
                     logit.warning('%s - %s пропал. Время пропадания - %s' %(name, moxa[key], updatetime[key].replace(microsecond=0)))
-                    os.system('/opt/csw/bin/mpg123 %ssound.mp3 % config.folder_path')
+                    os.system('/opt/csw/bin/mpg123 /sintez/sintez/moxa_monitoring/sound.mp3')
     for key in moxa.keys():
         if key in remont.keys():
             port = key+1
@@ -426,12 +367,8 @@ def moxa_func(ip, tree, name, moxa, rx, tx,  updatetime, IT, add_in_table, rem_n
                 updatetime[key] = curenttime
                 rx[key] = curentrx
                 tx[key] = curenttx
-                rx_file = open("%sparameters/rx%s.pkl" % config.folder_path %rem_num, "wb")
-                pickle.dump(rx, rx_file)
-                rx_file.close()
-                tx_file = open("%sparameters/tx%s.pkl" % config.folder_path %rem_num, "wb")
-                pickle.dump(tx, tx_file)
-                tx_file.close()
+                dump_file('rx', num, rx)
+                dump_file('tx', num, tx)
                 if curenttx != '0' and curentrx != '0':
                     rem = remont[key]
                     name_rem = rem[0]
@@ -453,77 +390,61 @@ def moxa_func(ip, tree, name, moxa, rx, tx,  updatetime, IT, add_in_table, rem_n
                     lst = [key, name_rem, period, 'ready' ]
                     d = {key: lst}
                     add_in_table.update(d)
-    add_in_table = collections.OrderedDict(sorted(add_in_table.items())) 
+    add_in_table = collections.OrderedDict(sorted(add_in_table.items()))
     for key in add_in_table.keys():
-	num = key -1
+        num = key -1
         r = tree.get_children()[num]
-        tree.item(r, values=(str(add_in_table[key][0]), str(add_in_table[key][1]), str(add_in_table[key][2])), tags=(add_in_table[key][3],)) 
+        tree.item(r, values=(str(add_in_table[key][0]), str(add_in_table[key][1]), str(add_in_table[key][2])), tags=(add_in_table[key][3],))
 
-     
-
+#Значение паузы
 a= 50
 
-def clean_func1():
-     while True:
-             try:
-                     moxa_func(config.ip1, tree1, "MOXA-1", values.moxa1, values.rx1, values.tx1, values.updatetime1, values.IT1, values.add_in_table1,  1)
-                     time.sleep(a)
-             except:
-                     pass
-
-def clean_func2():
-     while True:
-             try:
-                     moxa_func(config.ip2, tree2, "MOXA-2", values.moxa2, values.rx2, values.tx2, values.updatetime2, values.IT2, values.add_in_table2,  2)
-                     time.sleep(a)
-             except:
-                     pass
-
-def clean_func3():
-     while True:
-             try:
-                     moxa_func(config.ip3, tree3, "MOXA-3", values.moxa3, values.rx3, values.tx3, values.updatetime3, values.IT3, values.add_in_table3,  3)
-                     time.sleep(a)
-             except:
-                     pass
-
-def clean_func4():
-     while True:
-             try:
-                     moxa_func(config.ip4, tree4, "MOXA-4", values.moxa4, values.rx4, values.tx4,  values.updatetime4,values.IT4, values.add_in_table4,  4)
-                     time.sleep(a)
-             except:
-                     pass
-
-def clean_func5():
-     while True:
-             try:
-                     moxa_func(config.ip5, tree5, "MOXA-5", values.moxa5, values.rx5, values.tx5, values.updatetime5,values.IT5, values.add_in_table5,  5)
-                     time.sleep(a)
-             except:
-                     pass
-
-def clean_func6():
-     while True:
-             try:
-                     moxa_func(config.ip6, tree6, "MOXA-6", values.moxa6, values.rx6, values.tx6, values.updatetime6, values.IT6, values.add_in_table6,  6)
-                     time.sleep(a)
-             except:
-                     pass
+#Функция запуска бесконечного цикла мониторинга
+def start_function(tree, num):
+    while True:
+        try:
+            moxa_func(tree, num)
+            time.sleep(a)
+        except:
+            pass
 
 
 
-x1 = Thread(target=clean_func1)
-x1.start()
-x2 = Thread(target=clean_func2)
-x2.start()
-x3 = Thread(target=clean_func3)
-x3.start()
-x4 = Thread(target=clean_func4)
-x4.start()
-x5 = Thread(target=clean_func5)
-x5.start()
-x6 = Thread(target=clean_func6)
-x6.start()
+#Запуск параллельных потоков
+if len(list_moxa) == 4:
+    x1 = Thread(target=start_function, args=(tree1, 1,))
+    x1.start()
+
+    x2 = Thread(target=start_function, args=(tree2, 2,))
+    x2.start()
+
+    x3 = Thread(target=start_function, args=(tree3, 3,))
+    x3.start()
+
+    x4 = Thread(target=start_function, args=(tree4, 4,))
+    x4.start()
+
+
+if len(list_moxa) == 6:
+    x1 = Thread(target=start_function, args=(tree1, 1,))
+    x1.start()
+
+    x2 = Thread(target=start_function, args=(tree2, 2,))
+    x2.start()
+
+    x3 = Thread(target=start_function, args=(tree3, 3,))
+    x3.start()
+
+    x4 = Thread(target=start_function, args=(tree4, 4,))
+    x4.start()
+
+    x5 = Thread(target=start_function, args=(tree5, 5,))
+    x5.start()
+
+    x6 = Thread(target=start_function, args=(tree6, 6,))
+    x6.start()
+
+
 root.resizable()
 root.mainloop()
+
