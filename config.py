@@ -1,13 +1,34 @@
 #-*- coding: utf-8 -*-
 
 ###############################################
-####### Конфиг для мониторинга каналов ########
+####### Конфиг для мониторинга каналов #########
 ###############################################
 
 """Ниже в квадратных скобках укажите номера MOXA,
 которые нужно мониторить"""
 
 moxa = [1,2,3,4]
+
+#Выберите шрифт
+main_font = "Helvetica"
+
+#Размер шрифта
+size_font = 11
+
+#Высота строки
+rowheight = 18
+
+#Размер колонок
+name_column = 230
+state_column = 280
+
+#IP-адреса MOXA
+ip1 = 'moxa1'
+ip2 = 'moxa2'
+ip3 = 'moxa3'
+ip4 = 'moxa4'
+ip5 = 'moxa1'
+ip6 = 'moxa2'
 
 import datetime
 
@@ -476,17 +497,13 @@ add_in_table4 = {}
 add_in_table5 = {}
 add_in_table6 = {}
 
-
-"""Последний элемент списка - ip адрес moxa,
-НАПРИМЕР: для MOXA1 - 'moxa1'"""
-
 all_values_moxa = {
     1: [moxa1, rx1, tx1, updatetime1, IT1, remont1, add_in_table1, 'moxa1'],
     2: [moxa2, rx2, tx2, updatetime2, IT2, remont2, add_in_table2, 'moxa2'],
     3: [moxa3, rx3, tx3, updatetime3, IT3, remont3, add_in_table3, 'moxa3'],
     4: [moxa4, rx4, tx4, updatetime4, IT4, remont4, add_in_table4, 'moxa4'],
-    5: [moxa5, rx5, tx5, updatetime5, IT5, remont5, add_in_table5, 'moxa5'],
-    6: [moxa6, rx6, tx6, updatetime6, IT6, remont6, add_in_table6, 'moxa6'],
+    5: [moxa5, rx5, tx5, updatetime5, IT5, remont5, add_in_table5,  'moxa1'],
+    6: [moxa6, rx6, tx6, updatetime6, IT6, remont6, add_in_table6, 'moxa2']
 
 }
 
