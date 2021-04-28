@@ -16,10 +16,12 @@ def create_del_list():
     delta = datetime.timedelta(days=30)
     del_list = []
     for i in range(len(log)):
-        log_time = datetime.datetime.strptime(log[i][0:19], '%Y-%m-%d %H:%M:%S')
-        if now-log_time > delta:
-            del_list.append(i)
+        if log[i] != '\n':
+            log_time = datetime.datetime.strptime(log[i][0:19], '%Y-%m-%d %H:%M:%S')
+            if now - log_time > delta:
+                del_list.append(i)
     return del_list
+
 
 def delete_lines():
     del_list = create_del_list()
@@ -30,6 +32,7 @@ def delete_lines():
         for item in log:
             new.write(item)
 
+
 def represent_data(dif):
     if ',' in str(dif):
         result = ':'.join(str(dif).split(':')[:2])
@@ -39,21 +42,22 @@ def represent_data(dif):
         hour = time.split(':')[0]
         minutes = time.split(':')[1]
         if time[0] == '0':
-            state = day+ ' ' + minutes+'m'
+            state = day + ' ' + minutes + 'm'
             return state
         else:
-            state = day + ' '+hour+'h '+minutes+'m'
+            state = day + ' ' + hour + 'h ' + minutes + 'm'
             return state
     else:
         result = ':'.join(str(dif).split(':')[:2])
         hour = result.split(':')[0]
         minutes = result.split(':')[1]
         if hour[0] == '0':
-            state = minutes+'m'
+            state = minutes + 'm'
             return state
         else:
-            state = hour+'h '+minutes+'m'
+            state = hour + 'h ' + minutes + 'm'
             return state
+
 
 # Функции для загрузки и сохранения изменения в словари
 def load_file(name, num):
