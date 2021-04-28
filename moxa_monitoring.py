@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 ###############################################
 ####### Скрипт для мониторинга каналов ########
 ###############################################
@@ -19,29 +18,16 @@ from tkcalendar import Calendar
 from threading import Thread
 import subprocess
 import os
+import signal
 import logging, logging.handlers
 import collections
-import pickle
-import textwrap
 import config
+from modules import delete_lines, represent_data, load_file, dump_file
+
+pid = os.getpid()
 
 # Определяем количество MOXA для мониторинга из конфига
 list_moxa = config.moxa
-
-
-# Функции для загрузки и сохранения изменения в словари
-def load_file(name, num):
-    _file = open('/sintez/sintez/moxa_monitoring/parameters/%s%s.pkl' % (name, num), "rb")
-    result = pickle.load(_file)
-    _file.close()
-    return result
-
-
-def dump_file(name, num, dict_new):
-    _file = open("/sintez/sintez/moxa_monitoring/parameters/%s%s.pkl" % (name, num), "wb")
-    pickle.dump(dict_new, _file)
-    _file.close()
-
 
 # selecting parameters of font
 main_font = config.main_font
@@ -56,6 +42,7 @@ handler.setFormatter(formatter)
 logging.Formatter.converter = time.gmtime
 logit.addHandler(handler)
 
+logit.warning(str(pid))
 # Создание основного окна
 root = tk.Tk()
 root.title("Мониторинг состояния каналов")
@@ -87,16 +74,25 @@ class Popup(Menu):
                          font=tkFont.Font(family=main_font, size=size_font))
         self.add_command(label="Отправить канал в ремонт по времени", command=lambda: OnDoubleClick(tree, iid, num),
                          font=tkFont.Font(family=main_font, size=size_font))
+        self.add_command(label="Выключить звук", command=lambda: make_mute(tree, iid, num),
+                         font=tkFont.Font(family=main_font, size=size_font))
         #        self.add_command(label="ТЕСТ", command =comment)
         row = tree.item(iid)
         key = row["values"][0]
-        rem_file = open("/sintez/sintez/moxa_monitoring/parameters/remont%s.pkl" % num, "rb")
-        remont = pickle.load(rem_file)
+        remont = load_file('remont', num)
+        mute = load_file('mute', num)
         self.bind("<FocusOut>", self.focusOut)
         if key in remont.keys():
+            self.delete(2)
             self.delete(1)
             self.delete(0)
             self.add_command(label="Вернуть канал в работу", command=lambda: return_channel(tree, iid, num),
+                             font=tkFont.Font(family=main_font, size=size_font))
+        if mute[key] == 1:
+            self.delete(2)
+            self.delete(1)
+            self.delete(0)
+            self.add_command(label="Включить звук", command=lambda: make_loud(tree, iid, num),
                              font=tkFont.Font(family=main_font, size=size_font))
 
     def focusOut(self, event=None):
@@ -133,7 +129,8 @@ def return_channel(tree, iid, num):
                             tree_num = key_tree - 1
                             r = tree.get_children()[tree_num]
                             moxa = all_values[x][0]
-                            tree.item(r, values=(str(key_tree), str(moxa[key_tree]), str('<><><>')), tags=("green",))
+                            tree.item(r, values=(str(key_tree), str(moxa[key_tree]), str('updating status...')),
+                                      tags=("green",))
                             logit.warning('Канал %s в MOXA%s возвращен в работу' % (moxa[key_tree], x))
 
 
@@ -244,7 +241,7 @@ def OnDoubleClick(tree, iid, num):
                                              "%s %s %s %s" % (par1, d2[key_tree][1], par2, d2[key_tree][2])),
                                   tags=("blue",))
                         logit.warning('Канал %s в MOXA%s  отправлен на ремонт на период с %s до %s' % (
-                        d2[key_tree][0], num, begin.encode('utf-8'), end.encode('utf-8')))
+                            d2[key_tree][0], num, begin.encode('utf-8'), end.encode('utf-8')))
         top.destroy()
 
 
@@ -274,7 +271,56 @@ def on_agreement(tree, iid, num):
                                          "%s %s %s %s" % (par1, d2[key_tree][1], par2, d2[key_tree][2])),
                               tags=("blue",))
                     logit.warning('Канал %s в MOXA%s  отправлен на ремонт на период с %s до %s' % (
-                    d2[key_tree][0], num, begin, end))
+                        d2[key_tree][0], x, begin, end))
+
+
+def make_mute(tree, iid, num):
+    row = tree.item(iid)
+    key_tree = row['values'][0]
+    all_values = config.all_values_moxa
+    name = all_values[num][0][key_tree]
+    d2 = {key_tree: 1}
+    add_in_table = config.all_values_moxa[num][1]
+    for x in all_values.keys():
+        for all_dict in all_values[x][0]:
+            if name == all_values[x][0][all_dict]:
+                if x in list_moxa:
+                    tree = all_trees[x]
+                    mute = load_file('mute', x)
+                    mute.update(d2)
+                    dump_file('mute', x, mute)
+                    tree_num = key_tree - 1
+                    r = tree.get_children()[tree_num]
+                    state = 'mute' + str(add_in_table[key_tree][2])
+                    tree.item(r, values=(str(add_in_table[key_tree][0]), str(add_in_table[key_tree][1]), state),
+                              tags=(add_in_table[key_tree][3],))
+                    logit.warning('Канал %s в MOXA%s - mute mode on' % (
+                        name, x))
+
+
+def make_loud(tree, iid, num):
+    row = tree.item(iid)
+    key_tree = row['values'][0]
+    all_values = config.all_values_moxa
+    name = all_values[num][0][key_tree]
+    d2 = {key_tree: ""}
+    add_in_table = config.all_values_moxa[num][1]
+    for x in all_values.keys():
+        for all_dict in all_values[x][0]:
+            if name == all_values[x][0][all_dict]:
+                if x in list_moxa:
+                    tree = all_trees[x]
+                    mute = load_file('mute', x)
+                    mute.update(d2)
+                    dump_file('mute', x, mute)
+                    tree_num = key_tree - 1
+                    r = tree.get_children()[tree_num]
+                    state = str(add_in_table[key_tree][2])
+                    tree.item(r, values=(
+                        str(add_in_table[key_tree][0]), str(add_in_table[key_tree][1]), 'updating status...'),
+                              tags=(add_in_table[key_tree][3],))
+                    logit.warning('Канал %s в MOXA%s - mute mode off' % (
+                        name, x))
 
 
 # Формирование меню
@@ -283,7 +329,7 @@ menu_bar.add_command(label="Показать лог", command=lambda: insert_tex
                      font=tkFont.Font(family=main_font, size=size_font))
 menu_bar.add_command(label="Таблица соответствия", command=lambda: show_info(),
                      font=tkFont.Font(family=main_font, size=size_font))
-menu_bar.add_command(label="Выйти из программы", command=lambda: root.destroy(),
+menu_bar.add_command(label="Выйти из программы", command=lambda: os.kill(pid, signal.SIGKILL),
                      font=tkFont.Font(family=main_font, size=size_font))
 root.config(menu=menu_bar)
 
@@ -383,12 +429,14 @@ def moxa_func(tree, num):
     remember = []
     remont = load_file('remont', num)
     updatetime = load_file('updatetime', num)
+    mute = load_file('mute', num)
     rx = load_file('rx', num)
     tx = load_file('tx', num)
     IT = load_file('IT', num)
     moxa = config.all_values_moxa[num][0]
-    ip = config.all_values_moxa[num][7]
-    add_in_table = config.all_values_moxa[num][6]
+    ip = config.all_values_moxa[num][2]
+    add_in_table = config.all_values_moxa[num][1]
+    mute = load_file('mute', num)
     for key in moxa.keys():
         if key not in remont.keys():
             port = key + 1
@@ -402,34 +450,56 @@ def moxa_func(tree, num):
                 tx[key] = curenttx
                 dump_file('rx', num, rx)
                 dump_file('tx', num, tx)
-                if curenttx != '0' and curentrx != '0':
+                if curenttx != '0' and curentrx != '0' and mute[key] == "":
                     state = '<<< >>>'
                     remember.append(key)
                     lst = [key, moxa[key], state, 'green']
                     d = {key: lst}
                     add_in_table.update(d)
                     dump_file('updatetime', num, updatetime)
-                if curentrx != '0' and key not in remember:
+                if curentrx != '0' and key not in remember and mute[key] == "":
                     state = '<<<'
                     lst = [key, moxa[key], state, 'green']
                     d = {key: lst}
                     add_in_table.update(d)
                     dump_file('updatetime', num, updatetime)
-                if curenttx != '0' and key not in remember:
+                if curenttx != '0' and key not in remember and mute[key] == "":
                     state = '>>>'
                     lst = [key, moxa[key], state, 'green']
                     d = {key: lst}
                     add_in_table.update(d)
                     dump_file('updatetime', num, updatetime)
+                if curenttx != '0' and curentrx != '0' and mute[key] == 1:
+                    state = 'mute' + ' <<< >>>'
+                    remember.append(key)
+                    lst = [key, moxa[key], state, 'green']
+                    d = {key: lst}
+                    add_in_table.update(d)
+                    dump_file('updatetime', num, updatetime)
+                if curentrx != '0' and key not in remember and mute[key] == 1:
+                    state = 'mute' + ' <<<'
+                    lst = [key, moxa[key], state, 'green']
+                    d = {key: lst}
+                    add_in_table.update(d)
+                    dump_file('updatetime', num, updatetime)
+                if curenttx != '0' and key not in remember and mute[key] == 1:
+                    state = 'mute' + ' >>>'
+                    lst = [key, moxa[key], state, 'green']
+                    d = {key: lst}
+                    add_in_table.update(d)
+                    dump_file('updatetime', num, updatetime)
             IT[key] = curenttime - updatetime[key]
-            if IT[key] > datetime.timedelta(minutes=1) and IT[key] < datetime.timedelta(hours=12) and moxa[key] != "":
+            if IT[key] > datetime.timedelta(minutes=1) and IT[key] < datetime.timedelta(hours=12) and moxa[
+                key] != "" and mute[key] == "":
                 dump_file('updatetime', num, updatetime)
-                state = str(updatetime[key]).split(".")[0]
+                absent = represent_data(str(IT[key]))
+                state = str(updatetime[key]).split(".")[0] + ' ' + absent
                 lst = [key, moxa[key], state, 'red']
                 d = {key: lst}
                 add_in_table.update(d)
-            if IT[key] > datetime.timedelta(hours=12) and moxa[key] != "":
-                state = str(updatetime[key]).split(".")[0]
+            if IT[key] > datetime.timedelta(hours=12) and moxa[key] != "" and mute[key] == "":
+                absent = represent_data(str(IT[key]))
+                state = str(updatetime[key]).split(".")[0] + ' ' + absent
                 lst = [key, moxa[key], state, 'yellow']
                 d = {key: lst}
                 add_in_table.update(d)
@@ -437,18 +507,28 @@ def moxa_func(tree, num):
                 lst = [key, "", "", 'green']
                 d = {key: lst}
                 add_in_table.update(d)
+            if IT[key] > datetime.timedelta(minutes=1) and IT[key] < datetime.timedelta(hours=12) and moxa[
+                key] != "" and mute[key] == 1:
+                dump_file('updatetime', num, updatetime)
+                absent = represent_data(str(IT[key]))
+                state = 'mute' + ' ' + str(updatetime[key]).split(".")[0] + ' ' + absent
+                lst = [key, moxa[key], state, 'red']
+                d = {key: lst}
+                add_in_table.update(d)
+            if IT[key] > datetime.timedelta(hours=12) and moxa[key] != "" and mute[key] == 1:
+                absent = represent_data(str(IT[key]))
+                state = 'mute' + ' ' + str(updatetime[key]).split(".")[0] + ' ' + absent
+                lst = [key, moxa[key], state, 'yellow']
+                d = {key: lst}
+                add_in_table.update(d)
                 # Условие для всех каналов, кроме РЛИ_для_ВЕГА (при пропадании более чем на 2 мин загорается красным)
-            if datetime.timedelta(minutes=2) < IT[key] < datetime.timedelta(minutes=3) and moxa[key] != "" and moxa[
-                key] != "Объединенная РЛИ для ВЕГА":
-                logit.warning(
-                    '%s - %s пропал. Время пропадания - %s' % (name, moxa[key], updatetime[key].replace(microsecond=0)))
+            if datetime.timedelta(minutes=config.signalisation) < IT[key] < datetime.timedelta(
+                    minutes=config.signalisation + 1) and moxa[key] != "" and moxa[
+                key] != "Объединенная РЛИ для ВЕГА" and mute[key] != 1:
+                logit.warning('%s - %s пропал. Время пропадания - %s' % (
+                    name, moxa[key], updatetime[key].replace(microsecond=0)))
                 os.system('/opt/csw/bin/mpg123 /sintez/sintez/moxa_monitoring/sound.mp3')
-            # Условие для РЛИ_ВЕГА (при пропадании более чем на 30 мин загорается красным)
-            if datetime.timedelta(minutes=30) < IT[key] < datetime.timedelta(minutes=31) and moxa[
-                key] == "Объединенная РЛИ для ВЕГА":
-                logit.warning(
-                    '%s - %s пропал. Время пропадания - %s' % (name, moxa[key], updatetime[key].replace(microsecond=0)))
-                os.system('/opt/csw/bin/mpg123 /sintez/sintez/moxa_monitoring/sound.mp3')
+
     for key in remont.keys():
         port = key + 1
         rem = remont[key]
@@ -456,6 +536,7 @@ def moxa_func(tree, num):
         par1 = "Ремонт с ".decode('koi8-r').encode('koi8-r')
         par2 = " до ".decode('koi8-r').encode('koi8-r')
         period = par1 + rem[1] + par2 + rem[2]
+        period2 = 'mute ' + par1 + rem[1] + par2 + rem[2]
         lst = [key, name_rem, period, 'blue']
         d = {key: lst}
         add_in_table.update(d)
@@ -469,16 +550,28 @@ def moxa_func(tree, num):
             tx[key] = curenttx
             dump_file('rx', num, rx)
             dump_file('tx', num, tx)
-            if curenttx != '0' and curentrx != '0':
+            if curenttx != '0' and curentrx != '0' and mute[key] == "":
                 lst = [key, name_rem, period, 'ready']
                 d = {key: lst}
                 add_in_table.update(d)
-            elif curentrx != '0' and key not in remember:
+            elif curentrx != '0' and key not in remember and mute[key] == "":
                 lst = [key, name_rem, period, 'ready']
                 d = {key: lst}
                 add_in_table.update(d)
-            elif curenttx != '0' and key not in remember:
+            elif curenttx != '0' and key not in remember and mute[key] == "":
                 lst = [key, name_rem, period, 'ready']
+                d = {key: lst}
+                add_in_table.update(d)
+            if curenttx != '0' and curentrx != '0' and mute[key] == 1:
+                lst = [key, name_rem, period2, 'ready']
+                d = {key: lst}
+                add_in_table.update(d)
+            elif curentrx != '0' and key not in remember and mute[key] == 1:
+                lst = [key, name_rem, period2, 'ready']
+                d = {key: lst}
+                add_in_table.update(d)
+            elif curenttx != '0' and key not in remember and mute[key] == 1:
+                lst = [key, name_rem, period2, 'ready']
                 d = {key: lst}
                 add_in_table.update(d)
     add_in_table = collections.OrderedDict(sorted(add_in_table.items()))
@@ -489,16 +582,22 @@ def moxa_func(tree, num):
                   tags=(add_in_table[key][3],))
 
 
-# Значение паузы
-a = 50
-
-
 # Функция запуска бесконечного цикла мониторинга
 def start_function(tree, num):
     while True:
         try:
             moxa_func(tree, num)
-            time.sleep(a)
+            time.sleep(config.time1)
+        except:
+            pass
+
+
+# Deleting log
+def start_function2():
+    while True:
+        try:
+            delete_lines()
+            time.sleep(config.time2)
         except:
             pass
 
@@ -516,6 +615,9 @@ if len(list_moxa) == 4:
 
     x4 = Thread(target=start_function, args=(tree4, 4,))
     x4.start()
+
+    x5 = Thread(target=start_function2)
+    x5.start()
 
 if len(list_moxa) == 6:
     x1 = Thread(target=start_function, args=(tree1, 1,))
@@ -535,6 +637,9 @@ if len(list_moxa) == 6:
 
     x6 = Thread(target=start_function, args=(tree6, 6,))
     x6.start()
+
+    # x7 = Thread(target=start_function2)
+    # x7.start()
 
 root.resizable(height=False, width=False)
 root.mainloop()

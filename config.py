@@ -30,9 +30,15 @@ ip4 = 'moxa4'
 ip5 = 'moxa1'
 ip6 = 'moxa2'
 
-import datetime
+#Time for arriving music signalisation in minutes
+signalisation = 2
 
-moxa1 = {1: "ОРЛ-Т Комсомольск-1",
+#Время обновления сканирования MOXA в секундах
+time1 = 50
+#Время сканирования и зачистки старых строк в логе (старше 30 дней)
+time2=3600
+
+moxa1 = {1: "ОРЛ-Т Комсомольск (Сопка)-1",
          2: "ОРЛ-Т Хабаровск (МВРЛ)-1",
          3: "",
          4: "ОРЛ-Т Дальнереченск-1",
@@ -56,7 +62,7 @@ moxa1 = {1: "ОРЛ-Т Комсомольск-1",
          22: "АРП Благовещенск",
          23: "АРП Южно-Сахалинск",
          24: "АРП Владивосток",
-         25: "Объединенная РЛИ из Магадана",
+         25: "ОРЛ-Т Магадан (Крона)",
          26: "ОРЛ-Т Хабаровск (Сопка)-1",
          27: "ОРЛ-А Хабаровск (Лира-А10)-1",
          28: "ОРЛ-А Владивосток (Кневичи)",
@@ -65,7 +71,7 @@ moxa1 = {1: "ОРЛ-Т Комсомольск-1",
          31: "Метеосервер",
          32: "Объединенная РЛИ для ВЕГА"}
 
-moxa2 = {1: "ОРЛ-Т Комсомольск-2",
+moxa2 = {1: "ОРЛ-Т Комсомольск (Сопка)-2",
          2: "ОРЛ-Т Хабаровск (МВРЛ)-2",
          3: "",
          4: "ОРЛ-Т Дальнереченск-2",
@@ -98,7 +104,7 @@ moxa2 = {1: "ОРЛ-Т Комсомольск-2",
          31: "АРП Комсомольск",
          32: "Объединенная РЛИ для ФСО"}
 
-moxa3 = {1: "ОРЛ-Т Комсомольск-1",
+moxa3 = {1: "ОРЛ-Т Комсомольск (Сопка)-1",
          2: "ОРЛ-Т Хабаровск (МВРЛ)-1",
          3: "",
          4: "ОРЛ-Т Дальнереченск-1",
@@ -122,7 +128,7 @@ moxa3 = {1: "ОРЛ-Т Комсомольск-1",
          22: "АРП Благовещенск",
          23: "АРП Южно-Сахалинск",
          24: "АРП Владивосток",
-         25: "Объединенная РЛИ из Магадана",
+         25: "ОРЛ-Т Магадан (Крона)",
          26: "ОРЛ-Т Хабаровск (Сопка)-1",
          27: "ОРЛ-А Хабаровск (Лира-А10)-1",
          28: "ОРЛ-А Владивосток (Кневичи)",
@@ -131,7 +137,7 @@ moxa3 = {1: "ОРЛ-Т Комсомольск-1",
          31: "ОРЛ-А Николаевск (резерв ОРЛ-Т)",
          32: ""}
 
-moxa4 = {1: "ОРЛ-Т Комсомольск-2",
+moxa4 = {1: "ОРЛ-Т Комсомольск (Сопка)-2",
          2: "ОРЛ-Т Хабаровск (МВРЛ)-2",
          3: "",
          4: "ОРЛ-Т Дальнереченск-2",
@@ -230,266 +236,6 @@ moxa6 = {1: "ОРЛ-Т Комсомольск-2",
          31: "АРП Комсомольск",
          32: "Объединенная РЛИ для Дуб-2"}
 
-
-
-rx1 = {1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", 8: "", 9: "",
-          10: "", 11: "", 12: "", 13: "", 14:"", 15: "", 16:"", 17: "", 
-          18: "",19: "", 20: "", 21: "", 22: "", 23:"", 24: "", 25:"",
-           26: "", 27: "",28: "", 29: "", 30: "", 31: "", 32:""}
-
-rx2 = {1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", 8: "", 9: "",
-          10: "", 11: "", 12: "", 13: "", 14:"", 15: "", 16:"", 17: "", 
-          18: "",19: "", 20: "", 21: "", 22: "", 23:"", 24: "", 25:"",
-           26: "", 27: "",28: "", 29: "", 30: "", 31: "", 32:""}
-
-rx3 =  {1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", 8: "", 9: "",
-          10: "", 11: "", 12: "", 13: "", 14:"", 15: "", 16:"", 17: "", 
-          18: "",19: "", 20: "", 21: "", 22: "", 23:"", 24: "", 25:"",
-           26: "", 27: "",28: "", 29: "", 30: "", 31: "", 32:""}
-      
-rx4 = {1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", 8: "", 9: "",
-          10: "", 11: "", 12: "", 13: "", 14:"", 15: "", 16:"", 17: "", 
-          18: "",19: "", 20: "", 21: "", 22: "", 23:"", 24: "", 25:"",
-           26: "", 27: "",28: "", 29: "", 30: "", 31: "", 32:""}
-
-rx5 ={1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", 8: "", 9: "",
-          10: "", 11: "", 12: "", 13: "", 14:"", 15: "", 16:"", 17: "", 
-          18: "",19: "", 20: "", 21: "", 22: "", 23:"", 24: "", 25:"",
-           26: "", 27: "",28: "", 29: "", 30: "", 31: "", 32:""}
-
-rx6 = {1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", 8: "", 9: "",
-          10: "", 11: "", 12: "", 13: "", 14:"", 15: "", 16:"", 17: "", 
-          18: "",19: "", 20: "", 21: "", 22: "", 23:"", 24: "", 25:"",
-           26: "", 27: "",28: "", 29: "", 30: "", 31: "", 32:""}
-
-tx1 = {1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", 8: "", 9: "",
-          10: "", 11: "", 12: "", 13: "", 14:"", 15: "", 16:"", 17: "", 
-          18: "",19: "", 20: "", 21: "", 22: "", 23:"", 24: "", 25:"",
-           26: "", 27: "",28: "", 29: "", 30: "", 31: "", 32:""}
-
-tx2 = {1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", 8: "", 9: "",
-          10: "", 11: "", 12: "", 13: "", 14:"", 15: "", 16:"", 17: "", 
-          18: "",19: "", 20: "", 21: "", 22: "", 23:"", 24: "", 25:"",
-           26: "", 27: "",28: "", 29: "", 30: "", 31: "", 32:""}
-
-tx3 = {1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", 8: "", 9: "",
-          10: "", 11: "", 12: "", 13: "", 14:"", 15: "", 16:"", 17: "", 
-          18: "",19: "", 20: "", 21: "", 22: "", 23:"", 24: "", 25:"",
-           26: "", 27: "",28: "", 29: "", 30: "", 31: "", 32:""}
-      
-tx4 = {1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", 8: "", 9: "",
-          10: "", 11: "", 12: "", 13: "", 14:"", 15: "", 16:"", 17: "", 
-          18: "",19: "", 20: "", 21: "", 22: "", 23:"", 24: "", 25:"",
-           26: "", 27: "",28: "", 29: "", 30: "", 31: "", 32:""}
-
-tx5 = {1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", 8: "", 9: "",
-          10: "", 11: "", 12: "", 13: "", 14:"", 15: "", 16:"", 17: "", 
-          18: "",19: "", 20: "", 21: "", 22: "", 23:"", 24: "", 25:"",
-           26: "", 27: "",28: "", 29: "", 30: "", 31: "", 32:""}
-
-tx6 ={1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", 8: "", 9: "",
-          10: "", 11: "", 12: "", 13: "", 14:"", 15: "", 16:"", 17: "", 
-          18: "",19: "", 20: "", 21: "", 22: "", 23:"", 24: "", 25:"",
-           26: "", 27: "",28: "", 29: "", 30: "", 31: "", 32:""}
-
-updatetime1 = {1: datetime.datetime.today(),2: datetime.datetime.today(),
-      3:datetime.datetime.today(), 4: datetime.datetime.today(),
-      5:datetime.datetime.today(), 6: datetime.datetime.today(),
-      7:datetime.datetime.today(), 8: datetime.datetime.today(),
-      9: datetime.datetime.today(), 10:datetime.datetime.today(),
-      11: datetime.datetime.today(), 12:datetime.datetime.today(),
-      13: datetime.datetime.today(), 14:datetime.datetime.today(),
-      15: datetime.datetime.today(), 16:datetime.datetime.today(), 
-      17: datetime.datetime.today(), 18:datetime.datetime.today(), 19:datetime.datetime.today(), 
-      20: datetime.datetime.today(),21:datetime.datetime.today(), 
-      22: datetime.datetime.today(),23:datetime.datetime.today(), 
-      24: datetime.datetime.today(), 25: datetime.datetime.today(), 
-      26:datetime.datetime.today(), 27: datetime.datetime.today(),
-      28:datetime.datetime.today(), 29: datetime.datetime.today(), 
-      30:datetime.datetime.today(), 31: datetime.datetime.today(), 32:datetime.datetime.today()}
-
-updatetime2 = {1: datetime.datetime.today(),2: datetime.datetime.today(),
-      3:datetime.datetime.today(), 4: datetime.datetime.today(),
-      5:datetime.datetime.today(), 6: datetime.datetime.today(),
-      7:datetime.datetime.today(), 8: datetime.datetime.today(),
-      9: datetime.datetime.today(), 10:datetime.datetime.today(),
-      11: datetime.datetime.today(), 12:datetime.datetime.today(),
-      13: datetime.datetime.today(), 14:datetime.datetime.today(),
-      15: datetime.datetime.today(), 16:datetime.datetime.today(), 
-      17: datetime.datetime.today(),18:datetime.datetime.today(),19:datetime.datetime.today(), 
-      20: datetime.datetime.today(),21:datetime.datetime.today(), 
-      22: datetime.datetime.today(),23:datetime.datetime.today(), 
-      24: datetime.datetime.today(), 25: datetime.datetime.today(), 
-      26:datetime.datetime.today(), 27: datetime.datetime.today(),
-      28:datetime.datetime.today(), 29: datetime.datetime.today(), 
-      30:datetime.datetime.today(), 31: datetime.datetime.today(), 32:datetime.datetime.today()}
-
-updatetime3 = {1: datetime.datetime.today(),2: datetime.datetime.today(),
-      3:datetime.datetime.today(), 4: datetime.datetime.today(),
-      5:datetime.datetime.today(), 6: datetime.datetime.today(),
-      7:datetime.datetime.today(), 8: datetime.datetime.today(),
-      9: datetime.datetime.today(), 10:datetime.datetime.today(),
-      11: datetime.datetime.today(), 12:datetime.datetime.today(),
-      13: datetime.datetime.today(), 14:datetime.datetime.today(),
-      15: datetime.datetime.today(), 16:datetime.datetime.today(), 
-      17: datetime.datetime.today(),18:datetime.datetime.today(),19:datetime.datetime.today(), 
-      20: datetime.datetime.today(),21:datetime.datetime.today(), 
-      22: datetime.datetime.today(),23:datetime.datetime.today(), 
-      24: datetime.datetime.today(), 25: datetime.datetime.today(), 
-      26:datetime.datetime.today(), 27: datetime.datetime.today(),
-      28:datetime.datetime.today(), 29: datetime.datetime.today(), 
-      30:datetime.datetime.today(), 31: datetime.datetime.today(), 32:datetime.datetime.today()}
-
-updatetime4 = {1: datetime.datetime.today(),2: datetime.datetime.today(),
-      3:datetime.datetime.today(), 4: datetime.datetime.today(),
-      5:datetime.datetime.today(), 6: datetime.datetime.today(),
-      7:datetime.datetime.today(), 8: datetime.datetime.today(),
-      9: datetime.datetime.today(), 10:datetime.datetime.today(),
-      11: datetime.datetime.today(), 12:datetime.datetime.today(),
-      13: datetime.datetime.today(), 14:datetime.datetime.today(),
-      15: datetime.datetime.today(), 16:datetime.datetime.today(), 
-      17: datetime.datetime.today(),18:datetime.datetime.today(),19:datetime.datetime.today(), 
-      20: datetime.datetime.today(),21:datetime.datetime.today(), 
-      22: datetime.datetime.today(),23:datetime.datetime.today(), 
-      24: datetime.datetime.today(), 25: datetime.datetime.today(), 
-      26:datetime.datetime.today(), 27: datetime.datetime.today(),
-      28:datetime.datetime.today(), 29: datetime.datetime.today(), 
-      30:datetime.datetime.today(), 31: datetime.datetime.today(), 32:datetime.datetime.today()}
-
-updatetime5 = {1: datetime.datetime.today(),2: datetime.datetime.today(),
-      3:datetime.datetime.today(), 4: datetime.datetime.today(),
-      5:datetime.datetime.today(), 6: datetime.datetime.today(),
-      7:datetime.datetime.today(), 8: datetime.datetime.today(),
-      9: datetime.datetime.today(), 10:datetime.datetime.today(),
-      11: datetime.datetime.today(), 12:datetime.datetime.today(),
-      13: datetime.datetime.today(), 14:datetime.datetime.today(),
-      15: datetime.datetime.today(), 16:datetime.datetime.today(), 
-      17: datetime.datetime.today(),18:datetime.datetime.today(),19:datetime.datetime.today(), 
-      20: datetime.datetime.today(),21:datetime.datetime.today(), 
-      22: datetime.datetime.today(),23:datetime.datetime.today(), 
-      24: datetime.datetime.today(), 25: datetime.datetime.today(), 
-      26:datetime.datetime.today(), 27: datetime.datetime.today(),
-      28:datetime.datetime.today(), 29: datetime.datetime.today(), 
-      30:datetime.datetime.today(), 31: datetime.datetime.today(), 32:datetime.datetime.today()}
-
-updatetime6 = {1: datetime.datetime.today(),2: datetime.datetime.today(),
-      3:datetime.datetime.today(), 4: datetime.datetime.today(),
-      5:datetime.datetime.today(), 6: datetime.datetime.today(),
-      7:datetime.datetime.today(), 8: datetime.datetime.today(),
-      9: datetime.datetime.today(), 10:datetime.datetime.today(),
-      11: datetime.datetime.today(), 12:datetime.datetime.today(),
-      13: datetime.datetime.today(), 14:datetime.datetime.today(),
-      15: datetime.datetime.today(), 16:datetime.datetime.today(), 
-      17: datetime.datetime.today(),18:datetime.datetime.today(),19:datetime.datetime.today(), 
-      20: datetime.datetime.today(),21:datetime.datetime.today(), 
-      22: datetime.datetime.today(),23:datetime.datetime.today(), 
-      24: datetime.datetime.today(), 25: datetime.datetime.today(), 
-      26:datetime.datetime.today(), 27: datetime.datetime.today(),
-      28:datetime.datetime.today(), 29: datetime.datetime.today(), 
-      30:datetime.datetime.today(), 31: datetime.datetime.today(), 32:datetime.datetime.today()}
-
-IT1 = {1: datetime.datetime.today(),2: datetime.datetime.today(),
-      3:datetime.datetime.today(), 4: datetime.datetime.today(),
-      5:datetime.datetime.today(), 6: datetime.datetime.today(),
-      7:datetime.datetime.today(), 8: datetime.datetime.today(),
-      9: datetime.datetime.today(), 10:datetime.datetime.today(),
-      11: datetime.datetime.today(), 12:datetime.datetime.today(),
-      13: datetime.datetime.today(), 14:datetime.datetime.today(),
-      15: datetime.datetime.today(), 16:datetime.datetime.today(), 
-      17: datetime.datetime.today(),18:datetime.datetime.today(),19:datetime.datetime.today(), 
-      20: datetime.datetime.today(),21:datetime.datetime.today(), 
-      22: datetime.datetime.today(),23:datetime.datetime.today(), 
-      24: datetime.datetime.today(), 25: datetime.datetime.today(), 
-      26:datetime.datetime.today(), 27: datetime.datetime.today(),
-      28:datetime.datetime.today(), 29: datetime.datetime.today(), 
-      30:datetime.datetime.today(), 31: datetime.datetime.today(), 32:datetime.datetime.today()}
-
-IT2 = {1: datetime.datetime.today(),2: datetime.datetime.today(),
-      3:datetime.datetime.today(), 4: datetime.datetime.today(),
-      5:datetime.datetime.today(), 6: datetime.datetime.today(),
-      7:datetime.datetime.today(), 8: datetime.datetime.today(),
-      9: datetime.datetime.today(), 10:datetime.datetime.today(),
-      11: datetime.datetime.today(), 12:datetime.datetime.today(),
-      13: datetime.datetime.today(), 14:datetime.datetime.today(),
-      15: datetime.datetime.today(), 16:datetime.datetime.today(), 
-      17: datetime.datetime.today(),18:datetime.datetime.today(),19:datetime.datetime.today(), 
-      20: datetime.datetime.today(),21:datetime.datetime.today(), 
-      22: datetime.datetime.today(),23:datetime.datetime.today(), 
-      24: datetime.datetime.today(), 25: datetime.datetime.today(), 
-      26:datetime.datetime.today(), 27: datetime.datetime.today(),
-      28:datetime.datetime.today(), 29: datetime.datetime.today(), 
-      30:datetime.datetime.today(), 31: datetime.datetime.today(), 32:datetime.datetime.today()}
-      
-IT3 = {1: datetime.datetime.today(),2: datetime.datetime.today(),
-      3:datetime.datetime.today(), 4: datetime.datetime.today(),
-      5:datetime.datetime.today(), 6: datetime.datetime.today(),
-      7:datetime.datetime.today(), 8: datetime.datetime.today(),
-      9: datetime.datetime.today(), 10:datetime.datetime.today(),
-      11: datetime.datetime.today(), 12:datetime.datetime.today(),
-      13: datetime.datetime.today(), 14:datetime.datetime.today(),
-      15: datetime.datetime.today(), 16:datetime.datetime.today(), 
-      17: datetime.datetime.today(),18:datetime.datetime.today(),19:datetime.datetime.today(), 
-      20: datetime.datetime.today(),21:datetime.datetime.today(), 
-      22: datetime.datetime.today(),23:datetime.datetime.today(), 
-      24: datetime.datetime.today(), 25: datetime.datetime.today(), 
-      26:datetime.datetime.today(), 27: datetime.datetime.today(),
-      28:datetime.datetime.today(), 29: datetime.datetime.today(), 
-      30:datetime.datetime.today(), 31: datetime.datetime.today(), 32:datetime.datetime.today()}
-
-IT4 = {1: datetime.datetime.today(),2: datetime.datetime.today(),
-      3:datetime.datetime.today(), 4: datetime.datetime.today(),
-      5:datetime.datetime.today(), 6: datetime.datetime.today(),
-      7:datetime.datetime.today(), 8: datetime.datetime.today(),
-      9: datetime.datetime.today(), 10:datetime.datetime.today(),
-      11: datetime.datetime.today(), 12:datetime.datetime.today(),
-      13: datetime.datetime.today(), 14:datetime.datetime.today(),
-      15: datetime.datetime.today(), 16:datetime.datetime.today(), 
-      17: datetime.datetime.today(),18:datetime.datetime.today(),19:datetime.datetime.today(), 
-      20: datetime.datetime.today(),21:datetime.datetime.today(), 
-      22: datetime.datetime.today(),23:datetime.datetime.today(), 
-      24: datetime.datetime.today(), 25: datetime.datetime.today(), 
-      26:datetime.datetime.today(), 27: datetime.datetime.today(),
-      28:datetime.datetime.today(), 29: datetime.datetime.today(), 
-      30:datetime.datetime.today(), 31: datetime.datetime.today(), 32:datetime.datetime.today()}
-
-IT5 ={1: datetime.datetime.today(),2: datetime.datetime.today(),
-      3:datetime.datetime.today(), 4: datetime.datetime.today(),
-      5:datetime.datetime.today(), 6: datetime.datetime.today(),
-      7:datetime.datetime.today(), 8: datetime.datetime.today(),
-      9: datetime.datetime.today(), 10:datetime.datetime.today(),
-      11: datetime.datetime.today(), 12:datetime.datetime.today(),
-      13: datetime.datetime.today(), 14:datetime.datetime.today(),
-      15: datetime.datetime.today(), 16:datetime.datetime.today(), 
-      17: datetime.datetime.today(),18:datetime.datetime.today(),19:datetime.datetime.today(), 
-      20: datetime.datetime.today(),21:datetime.datetime.today(), 
-      22: datetime.datetime.today(),23:datetime.datetime.today(), 
-      24: datetime.datetime.today(), 25: datetime.datetime.today(), 
-      26:datetime.datetime.today(), 27: datetime.datetime.today(),
-      28:datetime.datetime.today(), 29: datetime.datetime.today(), 
-      30:datetime.datetime.today(), 31: datetime.datetime.today(), 32:datetime.datetime.today()}
-IT6 ={1: datetime.datetime.today(),2: datetime.datetime.today(),
-      3:datetime.datetime.today(), 4: datetime.datetime.today(),
-      5:datetime.datetime.today(), 6: datetime.datetime.today(),
-      7:datetime.datetime.today(), 8: datetime.datetime.today(),
-      9: datetime.datetime.today(), 10:datetime.datetime.today(),
-      11: datetime.datetime.today(), 12:datetime.datetime.today(),
-      13: datetime.datetime.today(), 14:datetime.datetime.today(),
-      15: datetime.datetime.today(), 16:datetime.datetime.today(), 
-      17: datetime.datetime.today(),18:datetime.datetime.today(),19:datetime.datetime.today(), 
-      20: datetime.datetime.today(),21:datetime.datetime.today(), 
-      22: datetime.datetime.today(),23:datetime.datetime.today(), 
-      24: datetime.datetime.today(), 25: datetime.datetime.today(), 
-      26:datetime.datetime.today(), 27: datetime.datetime.today(),
-      28:datetime.datetime.today(), 29: datetime.datetime.today(), 
-      30:datetime.datetime.today(), 31: datetime.datetime.today(), 32:datetime.datetime.today()}
-
-remont1 = {}
-remont2 = {}
-remont3 = {}
-remont4 = {}
-remont5 = {}
-remont6 = {}
-
 add_in_table1 = {}
 add_in_table2 = {}
 add_in_table3 = {}
@@ -498,13 +244,11 @@ add_in_table5 = {}
 add_in_table6 = {}
 
 all_values_moxa = {
-    1: [moxa1, rx1, tx1, updatetime1, IT1, remont1, add_in_table1, 'moxa1'],
-    2: [moxa2, rx2, tx2, updatetime2, IT2, remont2, add_in_table2, 'moxa2'],
-    3: [moxa3, rx3, tx3, updatetime3, IT3, remont3, add_in_table3, 'moxa3'],
-    4: [moxa4, rx4, tx4, updatetime4, IT4, remont4, add_in_table4, 'moxa4'],
-    5: [moxa5, rx5, tx5, updatetime5, IT5, remont5, add_in_table5,  'moxa1'],
-    6: [moxa6, rx6, tx6, updatetime6, IT6, remont6, add_in_table6, 'moxa2']
+    1: [moxa1, add_in_table1, ip1],
+    2: [moxa2, add_in_table2, ip2],
+    3: [moxa3, add_in_table3, ip3],
+    4: [moxa4, add_in_table4, ip4],
+    5: [moxa5, add_in_table5, ip5],
+    6: [moxa6, add_in_table6, ip6]
 
 }
-
-
