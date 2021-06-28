@@ -77,8 +77,7 @@ for key in working_trees.keys():
     tree = working_trees[key]
     tree.tree.bind("<Button-3>",
                    partial(do_popup, root=root, num=key, all_trees=working_trees, logit=logit, style=style))
-    tree.tree.bind("<1>",
-                   partial(do_popup2, num=key, style=style))
+    tree.tree.bind("<1>", partial(do_popup2, num=key, style=style))
 
 ################## Создание потоков ####################
 
@@ -91,7 +90,7 @@ for num in working_trees.keys():
 thread_log = Thread(target=clean_log)
 thread_list.append(thread_log)
 
-for thread in thread_list:
-    thread.start()
+# for thread in thread_list:
+#     thread.start()
 
 root.mainloop()

@@ -14,16 +14,18 @@ import Tkinter as tk
 import ScrolledText
 import tkFont
 from tkdocviewer import DocViewer
-from ttk import Treeview, Frame, Entry
-from Tkinter import LEFT, NO, YES, Menu
+from ttk import Treeview, Frame
+from Tkinter import LEFT, NO, YES, Menu, WORD, END
 from tkcalendar import Calendar
 import os
 from collections import OrderedDict
 import subprocess
+from threading import Thread
 
 from config import main_font, size_font, name_column, state_column
 from config import all_values_moxa, moxa as list_moxa
 from config import signalisation, time_update, time_clean_log
+from config import space_X, space_Y
 
 all_values = {key: all_values_moxa[key] for key in all_values_moxa if key in list_moxa}
 
@@ -108,6 +110,57 @@ def dump_file(name, num, dict_new):
     _file.close()
 
 
+def add_comment(text_comment, num, key_channel, name):
+    with open('comments/comment_%s_%s.txt' % (num, key_channel), 'a+') as comment:
+        comment.write('%s:\n' %name)
+        for line in text_comment:
+            comment.write(line)
+
+
+class Comment_Widget:
+    def __init__(self, name, key):
+        self.name = name
+        self.key = key
+
+    def start(self):
+        self.win = tk.Toplevel()
+        self.win.wm_title('Добавить/Изменить комментарий для канала - %s' % self.name)
+        frame_comment = Frame(self.win)
+        frame_comment.pack(side=LEFT)
+        frame_buttons = Frame(self.win)
+        frame_buttons.pack(side=LEFT)
+        self.text = ScrolledText.ScrolledText(frame_comment, height=5, width=50,
+                                              font=tkFont.Font(family=main_font, size=size_font), wrap=WORD)
+        self.text.pack()
+        for item in all_values.keys():
+            for all_dict in all_values[item][0]:
+                if self.name == all_values[item][0][all_dict]:
+                    if item in list_moxa:
+                        with open('comments/comment_%s_%s.txt' % (item, self.key), 'a+') as comment:
+                            file_log = comment.readlines()
+                            self.text.delete(1.0, tk.END)
+                            for element in file_log:
+                                self.text.insert(tk.END, element)
+        but1 = tk.Button(frame_buttons, text="Сохранить", font=tkFont.Font(family=main_font, size=size_font),
+                         command=self.add_comment, activebackground='spring green', height=1, width=12)
+        but2 = tk.Button(frame_buttons, text="Отмена", font=tkFont.Font(family=main_font, size=size_font),
+                         command=self.win.destroy, activebackground='salmon', height=1, width=12)
+        but1.pack()
+        but2.pack()
+
+    def add_comment(self):
+        new_message = self.text.get('1.0', END)
+        if new_message != "":
+            for item in all_values.keys():
+                for all_dict in all_values[item][0]:
+                    if self.name == all_values[item][0][all_dict]:
+                        if item in list_moxa:
+                            with open('comments/comment_%s_%s.txt' % (item, self.key), 'w') as comment:
+                                comment.write('%s:\n' % self.name.decode('koi8-r').encode('koi8-r'))
+                                comment.write(new_message)
+        self.win.destroy()
+
+
 def insert_text():
     """Функция для просмотра лога,
     добавляет текст в виджет"""
@@ -169,11 +222,45 @@ class Tree(Treeview):
         self.tree.tag_configure('blue', background='gray7', foreground='RoyalBlue')
         self.tree.tag_configure('yellow', background='gray7', foreground='yellow')
         self.tree.tag_configure('ready', background='gray7', foreground='white')
+        self.tree.tag_configure('focus', background='yellow', )
+        self.tree.bind("<Motion>", self.mycallback)
+        self.last_focus = None
         self.tree.pack(side=LEFT)
         self.logit = logit
         self.moxa = all_values[self.num][0]
+        self.wraplength = 180
         for key in self.moxa.keys():
             self.tree.insert("", "end", values=(str(key), self.moxa[key], "<><><>"), tags=("green",))
+
+    def mycallback(self, event):
+
+        _iid = self.tree.identify_row(event.y)
+
+        if _iid != self.last_focus:
+            if self.last_focus:
+                try:
+                    if self.tw:
+                        self.tw.destroy()
+                except:
+                    pass
+            if _iid:
+                row = self.tree.item(_iid)
+                key = row["values"][0]
+                if os.path.isfile('comments/comment_%s_%s.txt' % (self.num, key)):
+                    with open('comments/comment_%s_%s.txt' % (self.num, key), 'a+') as comment:
+                        file_log = comment.read()
+                        param = self.tree.bbox(_iid)
+                        x = (param[0] + space_X) * self.num
+                        y = param[1] + space_Y
+                        self.tw = tk.Toplevel()
+                        self.tw.wm_overrideredirect(True)
+                        self.tw.wm_geometry("+%d+%d" % (x, y))
+                        label = tk.Label(self.tw, text=file_log, justify='left',
+                                         background="yellow2", relief='solid', borderwidth=1,
+                                         wraplength=self.wraplength, font=tkFont.Font(family=main_font, size=size_font))
+                        label.pack()
+
+                self.last_focus = _iid
 
 
 class AppTime(Frame):
@@ -213,17 +300,30 @@ class ChangeStatement:
         self.name = self.all_values[self.num][0][self.key_tree]
         self.add_in_table = all_values[self.num][1]
 
+    def on_time_thread(self):
+        thread0 = Thread(target=self.on_time)
+        thread0.start()
+
     def on_time(self):
         """ Выбрать время """
 
         self.top = tk.Toplevel()
         self.top.wm_title(self.name)
-        frame1 = tk.Frame(self.top)
+        frame_up = tk.Frame(self.top)
+        frame_up.pack()
+        frame_down = tk.Frame(self.top)
+        frame_down.pack()
+        frame1 = tk.Frame(frame_up)
         frame1.pack(side=LEFT)
-        frame2 = tk.Frame(self.top)
+        frame2 = tk.Frame(frame_up)
         frame2.pack(side=LEFT)
-        frame3 = tk.Frame(self.top)
+        frame3 = tk.Frame(frame_up)
         frame3.pack(side=LEFT)
+        text4 = tk.Label(frame_down, text='\nДобавьте комментарий', font=tkFont.Font(family=main_font, size=size_font))
+        text4.pack()
+        self.comment_text = ScrolledText.ScrolledText(frame_down, height=3, width=80,
+                                                      font=tkFont.Font(family=main_font, size=size_font), wrap=WORD)
+        self.comment_text.pack()
         lab1 = tk.Label(frame1, text='Дата и время начала работ', font=tkFont.Font(family=main_font, size=size_font))
         lab1.pack()
         self.cal1 = Calendar(frame1, font="Arial 14", selectmode="day", year=datetime.datetime.today().year,
@@ -297,6 +397,7 @@ class ChangeStatement:
                             new_value[self.key_tree][2]), "blue"]
                         new_value_add = {self.key_tree: lst}
                         self.add_in_table.update(new_value_add)
+                        add_comment(self.comment_text.get('1.0', END), item, self.key_tree, self.name)
         self.top.destroy()
 
     def on_agreement(self):
@@ -400,7 +501,6 @@ class ControlSound:
 
         new_value = {self.key_tree: ""}
         for item in self.all_values.keys():
-            print('ok')
             for all_dict in self.all_values[item][0]:
                 if self.name == self.all_values[item][0][all_dict]:
                     if item in list_moxa:
@@ -453,7 +553,6 @@ class ChannelLog:
         but.pack()
 
 
-
 class Popup(Menu):
     """ Выпадающие меню при нажатии ПКМ"""
 
@@ -464,13 +563,16 @@ class Popup(Menu):
         self.num = num
         self.all_trees = all_trees
         self.logit = logit
+        self.row = self.tree.item(self.iid)
+        self.key = self.row["values"][0]
+        self.name = all_values[self.num][0][self.key]
         self.add_command(label="Отправить канал в ремонт до распоряжения",
                          command=lambda: ChangeStatement(self.tree, self.iid, self.num, self.all_trees,
                                                          self.logit).on_agreement(),
                          font=tkFont.Font(family=main_font, size=size_font))
         self.add_command(label="Отправить канал в ремонт по времени",
                          command=lambda: ChangeStatement(self.tree, self.iid, self.num, self.all_trees,
-                                                         self.logit).on_time(),
+                                                         self.logit).on_time_thread(),
                          font=tkFont.Font(family=main_font, size=size_font))
         self.add_command(label="Выключить звук",
                          command=lambda: ControlSound(self.tree, self.iid, self.num, self.all_trees, self.logit).mute(),
@@ -478,23 +580,21 @@ class Popup(Menu):
         self.add_command(label="Показать лог по данному каналу",
                          command=lambda: ChannelLog(self.tree, self.iid, self.num).read_log(),
                          font=tkFont.Font(family=main_font, size=size_font))
-        # self.add_command(label="Добавить комментарий",
-        #                  command=lambda: ChannelLog(self.tree, self.iid, self.num).read_log(),
-        #                  font=tkFont.Font(family=main_font, size=size_font))
-        #        self.add_command(label="ТЕСТ", command =comment)
-        self.row = self.tree.item(self.iid)
-        key = self.row["values"][0]
+        self.add_command(label="Добавить/Изменить комментарий",
+                         command=lambda: Comment_Widget(self.name, self.key).start(),
+                         font=tkFont.Font(family=main_font, size=size_font))
+        # self.add_command(label="ТЕСТ", command =comment)
         remont = load_file('remont', num)
         mute = load_file('mute', num)
         self.bind("<FocusOut>", self.focusOut)
-        if key in remont.keys():
+        if self.key in remont.keys():
             self.delete(2)
             self.delete(1)
             self.delete(0)
             self.add_command(label="Вернуть канал в работу",
                              command=lambda: ChangeStatement(tree, iid, num, all_trees, logit).return_channel(),
                              font=tkFont.Font(family=main_font, size=size_font))
-        if mute[key] == 1:
+        if mute[self.key] == 1:
             self.delete(2)
             self.delete(1)
             self.delete(0)
@@ -502,15 +602,17 @@ class Popup(Menu):
                              command=lambda: ControlSound(self.tree, self.iid, self.num, self.all_trees,
                                                           self.logit).loud(),
                              font=tkFont.Font(family=main_font, size=size_font))
-        # if comment[key] == 1:
-        #     self.add_command(label="Редактировать комментарий",
-        #                      command=lambda: ControlSound(self.tree, self.iid, self.num, self.all_trees,
-        #                                                   self.logit).loud(),
-        #                      font=tkFont.Font(family=main_font, size=size_font))
-        #     self.add_command(label="Удалить комментарий",
-        #                      command=lambda: ControlSound(self.tree, self.iid, self.num, self.all_trees,
-        #                                                   self.logit).loud(),
-        #                      font=tkFont.Font(family=main_font, size=size_font))
+
+        if os.path.isfile('comments/comment_%s_%s.txt' % (self.num, self.key)):
+            self.add_command(label="Удалить комментарий", command=self.delete_comment,
+                             font=tkFont.Font(family=main_font, size=size_font))
+
+    def delete_comment(self):
+        for item in all_values.keys():
+            for all_dict in all_values[item][0]:
+                if self.name == all_values[item][0][all_dict]:
+                    if item in list_moxa:
+                        os.system('rm comments/comment_%s_%s.txt' % (item, self.key))
 
     def focusOut(self, event=None):
         self.unpost()
