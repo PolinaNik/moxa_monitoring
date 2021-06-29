@@ -90,7 +90,7 @@ for num in working_trees.keys():
 thread_log = Thread(target=clean_log)
 thread_list.append(thread_log)
 
-# for thread in thread_list:
-#     thread.start()
+for thread in thread_list:
+    thread.start()
 
 root.mainloop()
