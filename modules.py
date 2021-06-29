@@ -111,18 +111,24 @@ def dump_file(name, num, dict_new):
 
 
 def add_comment(text_comment, num, key_channel, name):
+    """ Записать комментарий в файл """
+
     with open('comments/comment_%s_%s.txt' % (num, key_channel), 'a+') as comment:
-        comment.write('%s:\n' %name)
+        comment.write('%s:\n' % name)
         for line in text_comment:
             comment.write(line)
 
 
 class Comment_Widget:
+    """ Виджет для создания комментариев"""
+
     def __init__(self, name, key):
         self.name = name
         self.key = key
 
     def start(self):
+        """ Стартовое окно виджета """
+
         self.win = tk.Toplevel()
         self.win.wm_title('Добавить/Изменить комментарий для канала - %s' % self.name)
         frame_comment = Frame(self.win)
@@ -149,6 +155,8 @@ class Comment_Widget:
         but2.pack()
 
     def add_comment(self):
+        """ Функция сохранения и записи комментария в файл после нажатия кнопки Сохранить """
+
         new_message = self.text.get('1.0', END)
         if new_message != "":
             for item in all_values.keys():
@@ -233,9 +241,9 @@ class Tree(Treeview):
             self.tree.insert("", "end", values=(str(key), self.moxa[key], "<><><>"), tags=("green",))
 
     def mycallback(self, event):
+        """ Функция, отображающая комментарий при наведении мыши на канал """
 
         _iid = self.tree.identify_row(event.y)
-
         if _iid != self.last_focus:
             if self.last_focus:
                 try:
@@ -243,6 +251,7 @@ class Tree(Treeview):
                         self.tw.destroy()
                 except:
                     pass
+
             if _iid:
                 row = self.tree.item(_iid)
                 key = row["values"][0]
@@ -259,7 +268,6 @@ class Tree(Treeview):
                                          background="yellow2", relief='solid', borderwidth=1,
                                          wraplength=self.wraplength, font=tkFont.Font(family=main_font, size=size_font))
                         label.pack()
-
                 self.last_focus = _iid
 
 
@@ -300,45 +308,27 @@ class ChangeStatement:
         self.name = self.all_values[self.num][0][self.key_tree]
         self.add_in_table = all_values[self.num][1]
 
-    def on_time_thread(self):
-        thread0 = Thread(target=self.on_time)
-        thread0.start()
 
     def on_time(self):
         """ Выбрать время """
 
         self.top = tk.Toplevel()
         self.top.wm_title(self.name)
-        frame_up = tk.Frame(self.top)
-        frame_up.pack()
-        frame_down = tk.Frame(self.top)
-        frame_down.pack()
-        frame1 = tk.Frame(frame_up)
-        frame1.pack(side=LEFT)
-        frame2 = tk.Frame(frame_up)
-        frame2.pack(side=LEFT)
-        frame3 = tk.Frame(frame_up)
-        frame3.pack(side=LEFT)
-        text4 = tk.Label(frame_down, text='\nДобавьте комментарий', font=tkFont.Font(family=main_font, size=size_font))
-        text4.pack()
-        self.comment_text = ScrolledText.ScrolledText(frame_down, height=3, width=80,
-                                                      font=tkFont.Font(family=main_font, size=size_font), wrap=WORD)
-        self.comment_text.pack()
-        lab1 = tk.Label(frame1, text='Дата и время начала работ', font=tkFont.Font(family=main_font, size=size_font))
-        lab1.pack()
-        self.cal1 = Calendar(frame1, font="Arial 14", selectmode="day", year=datetime.datetime.today().year,
+        lab1 = tk.Label(self.top, text='Дата и время начала работ', font=tkFont.Font(family=main_font, size=size_font))
+        lab1.grid(row=0, column=0, columnspan=4, ipady=10, padx=10)
+        self.cal1 = Calendar(self.top, font="Arial 14", selectmode="day", year=datetime.datetime.today().year,
                              month=datetime.datetime.today().month, day=datetime.datetime.today().day)
-        self.cal1.pack()
-        self.time1 = AppTime(frame1)
-        self.time1.pack()
-        lab2 = tk.Label(frame2, text='Дата и время завершения работ',
+        self.cal1.grid(row=1, column=0, columnspan=4, rowspan=4, padx=10)
+        self.time1 = AppTime(self.top)
+        self.time1.grid(row=5, column=0, columnspan=4, pady=10)
+        lab2 = tk.Label(self.top, text='Дата и время завершения работ',
                         font=tkFont.Font(family=main_font, size=size_font))
-        lab2.pack()
-        self.cal2 = Calendar(frame2, font="Arial 14", selectmode="day", year=datetime.datetime.today().year,
+        lab2.grid(row=0, column=5, columnspan=4, ipady=10)
+        self.cal2 = Calendar(self.top, font="Arial 14", selectmode="day", year=datetime.datetime.today().year,
                              month=datetime.datetime.today().month, day=datetime.datetime.today().day)
-        self.cal2.pack()
-        self.time2 = AppTime(frame2)
-        self.time2.pack()
+        self.cal2.grid(row=1, column=5, columnspan=4, rowspan=4, padx=10)
+        self.time2 = AppTime(self.top)
+        self.time2.grid(row=5, column=5, columnspan=4, pady=10)
 
         self.day1 = self.cal1.get_date()
         self.day2 = self.cal2.get_date()
@@ -346,14 +336,19 @@ class ChangeStatement:
         self.hour2 = self.time2.hourstr.get()
         self.min1 = self.time1.minstr.get()
         self.min2 = self.time2.minstr.get()
-        but1 = tk.Button(frame3, text="Выбрать",
+        text4 = tk.Label(self.top, text='Добавьте комментарий:', font=tkFont.Font(family=main_font, size=size_font))
+        text4.grid(row=6, column=0, columnspan=5, padx=10)
+        self.comment_text = ScrolledText.ScrolledText(self.top, height=4, width=40,
+                                                      font=tkFont.Font(family=main_font, size=size_font), wrap=WORD)
+        self.comment_text.grid(row=7, column=0, columnspan=5, padx=10, pady=10)
+        but1 = tk.Button(self.top, text="Выбрать",
                          command=self.select_on_time,
                          activebackground='PaleGreen1', font=tkFont.Font(family=main_font, size=size_font), height=2,
                          width=10)
-        but1.pack()
-        but2 = tk.Button(frame3, text="Отмена", command=self.top.destroy, activebackground='salmon',
+        but1.grid(row=7, column=6)
+        but2 = tk.Button(self.top, text="Отмена", command=self.top.destroy, activebackground='salmon',
                          font=tkFont.Font(family=main_font, size=size_font), height=2, width=10)
-        but2.pack()
+        but2.grid(row=7, column=7)
         self.top.resizable(height=False, width=False)
 
     def select_on_time(self):
@@ -572,7 +567,7 @@ class Popup(Menu):
                          font=tkFont.Font(family=main_font, size=size_font))
         self.add_command(label="Отправить канал в ремонт по времени",
                          command=lambda: ChangeStatement(self.tree, self.iid, self.num, self.all_trees,
-                                                         self.logit).on_time_thread(),
+                                                         self.logit).on_time(),
                          font=tkFont.Font(family=main_font, size=size_font))
         self.add_command(label="Выключить звук",
                          command=lambda: ControlSound(self.tree, self.iid, self.num, self.all_trees, self.logit).mute(),
